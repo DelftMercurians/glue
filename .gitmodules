@@ -1,0 +1,3 @@
+[submodule "extern/Firmware_Protocols"]
+	path = extern/Firmware_Protocols
+	url = https://github.com/DelftMercurians/Firmware_Protocols.git
