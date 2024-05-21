@@ -54,6 +54,8 @@ fn main() {
         .rustified_enum("CAN::MESSAGE_ID")
         .rustified_enum("CAN::ACCESS")
         .rustified_enum("CAN::VARIABLE")
+        .rustified_enum("Radio::PrimaryStatusHF")
+        .rustified_enum("Radio::PrimaryStatusLF")
         .clang_arg("--target=arm-none-eabi")
         .clang_arg("-DUSING_BINDGEN")
         .blocklist_file("^(.*can_id\\.h$)$")
