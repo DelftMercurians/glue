@@ -54,6 +54,7 @@ fn main() {
         .rustified_enum("CAN::MESSAGE_ID")
         .rustified_enum("CAN::ACCESS")
         .rustified_enum("CAN::VARIABLE")
+        .clang_arg("--target=arm-none-eabi")
         .clang_arg("-DUSING_BINDGEN")
         .blocklist_file("^(.*can_id\\.h$)$")
         .parse_callbacks(Box::new(MacroCallback {
