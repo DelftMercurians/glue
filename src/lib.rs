@@ -113,6 +113,26 @@ pub fn wrap_command(command : Radio_Command) -> Radio_Message {
     }
 }
 
+pub fn messagewrapper_to_bytes(msg : Radio_MessageWrapper) -> [u8; std::mem::size_of::<Radio_MessageWrapper>()] {
+    unsafe{
+        std::mem::transmute(msg)
+    }
+}
+
+pub fn wrap_message_to_packet(msg : Radio_Message, id : Radio_SSL_ID) -> [u8; std::mem::size_of::<Radio_MessageWrapper>()+3] {
+    let rmw = Radio_MessageWrapper {
+        msg,
+        id,
+    };
+    let mut a = [0; std::mem::size_of::<Radio_MessageWrapper>() + 3];
+    a[0] = 0b10100101;
+    a[1] = std::mem::size_of::<Radio_MessageWrapper>() as u8;
+    let data = messagewrapper_to_bytes(rmw);
+    a[2..std::mem::size_of::<Radio_MessageWrapper>()+2].copy_from_slice(&data);
+    a[std::mem::size_of::<Radio_MessageWrapper>()+2] = crc_calc.checksum(&data);
+    a
+}
+
 pub fn message_to_bytes(msg : Radio_Message) -> [u8; std::mem::size_of::<Radio_Message>()] {
     unsafe{
         std::mem::transmute(msg)
