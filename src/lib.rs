@@ -196,8 +196,8 @@ mod tests {
             assert_eq!(status.motor_speeds[2], 2.0);
             assert_eq!(status.motor_speeds[3], 3.0);
             assert_eq!(status.motor_speeds[4], 4.0);
-            assert_eq!(status.breakbeam_state[0], true);
-            assert_eq!(status.breakbeam_state[1], false);
+            assert_eq!(status.breakbeam_ball_detected, true);
+            assert_eq!(status.breakbeam_sensor_ok, false);
         } else {
             assert!(false);
         }
