@@ -16,13 +16,22 @@ struct MacroCallback {
 
 impl ParseCallbacks for MacroCallback {
     fn add_derives(&self, info: &DeriveInfo<'_>) -> Vec<String> {
-        if info.name == "HG_Status" || info.name == "Radio_MessageType" {
-            vec![
-                "FromPrimitive".into(),
-                "ToPrimitive".into(),
-            ]
-        } else {
-            vec![]
+        match info.name {
+            "HG_Status" | "Radio_MessageType" =>
+                vec![
+                    "FromPrimitive".into(),
+                    "ToPrimitive".into(),
+                    "AsBytes".into(),
+                ],
+            "HG_Pose" | "CAN_VARIABLE" | "Radio_ConfigMessage" | "Radio_Command" | "Radio_Reply" |
+            "Radio_PrimaryStatusHF" | "Radio_PrimaryStatusLF" |
+            "Radio_ImuReadings" | "MessageType" | "Radio_Message" |
+            "Radio_Message__bindgen_ty_1" | "Radio_Message__bindgen_ty_1__bindgen_ty_1" | "Radio_Message__bindgen_ty_1__bindgen_ty_2" |
+            "Radio_MessageWrapper" =>
+                vec![
+                    "AsBytes".into(),
+                ],
+            _ => vec![],
         }
     }
 }
@@ -47,8 +56,9 @@ fn main() {
         // The input header we would like to generate
         // bindings for.
         .raw_line("use num_derive::{ToPrimitive,FromPrimitive};")
-        .raw_line("use num_traits::FromPrimitive;")
+        .raw_line("use zerocopy_derive::AsBytes;")
         .header("wrapper.hpp")
+        .derive_debug(true)
         .rustified_enum("HG::Status")
         .rustified_enum("CAN::DEVICE_ID")
         .rustified_enum("CAN::MESSAGE_ID")
