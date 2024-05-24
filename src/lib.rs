@@ -165,6 +165,20 @@ pub fn to_radio_message(raw: [u8; std::mem::size_of::<Radio_Message>()], crc : O
     }
 }
 
+pub fn to_base_info(raw: [u8; std::mem::size_of::<Base_Information>()], crc : Option<u8>) -> Option<Base_Information> {
+    // Check CRC8 checksum
+    if let Some(crc_value) = crc {
+        if crc_calc.checksum(&raw) != crc_value { return None };
+    }
+
+    unsafe {
+        // Convert to struct
+        let bi: Base_Information = std::mem::transmute(raw);
+
+        return Some(bi);
+    }
+}
+
 pub fn to_radio_message_wrapper(raw: [u8; std::mem::size_of::<Radio_MessageWrapper>()], crc : Option<u8>) -> Option<(u8, Radio_Message)> {
     // Check CRC8 checksum
     if let Some(crc_value) = crc {
