@@ -1,4 +1,4 @@
-#[derive(Debug)]
+#[derive(Debug, Copy, Clone)]
 pub enum Stamped<T> {
     Have(std::time::Instant, T),
     NothingYet,
@@ -7,6 +7,10 @@ pub enum Stamped<T> {
 impl<T> Stamped<T> {
     pub fn make_now(val : T) -> Stamped<T> {
         Self::Have(std::time::Instant::now(), val)
+    }
+
+    pub fn update(&mut self, val : T) {
+        *self = Self::Have(std::time::Instant::now(), val)
     }
 
     pub fn time_since(&self) -> Option<std::time::Duration> {

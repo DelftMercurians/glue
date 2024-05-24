@@ -1,7 +1,7 @@
 use serialport::SerialPort;
 use std::time::Duration;
 use std::io;
-use crate::glue::*;
+// use crate::glue::*;
 
 const SERIAL_BUF_LEN: usize = 100000;
 
@@ -73,7 +73,7 @@ impl Serial {
         ports.into_iter().filter(|p| !filter || Self::is_basestation(&p)).map(|p| p.port_name).collect()
     }
 
-    pub fn open_port(port_name : &str) -> Box<dyn SerialPort> {
+    fn open_port(port_name : &str) -> Box<dyn SerialPort> {
         serialport::new(port_name, 115200)
                     .timeout(Duration::from_millis(10))
                     .open()
@@ -87,14 +87,16 @@ impl Serial {
         };
     }
 
-    pub fn send_command(&mut self, id : Radio_SSL_ID , command : Radio_Command) {
-        let msg = wrap_command(command);
-        let b = wrap_message_to_packet(msg, id);
-
-        match self.port.write_all(&b) {
-            Ok(()) => (),
-            Err(e) => eprintln!("{:?}", e),
+    pub fn send_command(&mut self, id : crate::glue::Radio_SSL_ID , command : crate::glue::Radio_Command) -> Result<(), std::io::Error> {
+        let msg = crate::glue::Radio_Message_Rust::Radio_Command(command).wrap();
+        let mw = crate::glue::Radio_MessageWrapper {
+            id,
+            _pad: [0, 0, 0],
+            msg,
         };
+        let bytes = crate::glue::to_packet(mw);
+
+        self.port.write_all(&bytes)
     }
 
     fn read(&mut self) -> Result<(), ()> {
@@ -131,13 +133,13 @@ impl Serial {
             let len: usize = self.serial_buf[index+1] as usize;
 
             if self.glob_index < index + len + 3 {
-                println!("Buffer not long enough to all data len = {len}");
+                println!("Buffer not long enough for all data len = {len}");
                 return None;
             }
 
             if len > 50 {
                 println!("Bad packet: size too large");
-                self.serial_buf.rotate_left(index + 1);
+                self.serial_buf.rotate_left(index + 1); // probably quite expensive, consider a circular buffer
                 self.glob_index -= index + 1;
                 return None;
             }
@@ -149,7 +151,7 @@ impl Serial {
             // println!("data = {data:02X?}");
             // println!("crc = {crc:#02X}");
 
-            if crc != crc_calc.checksum(&data) {
+            if crc != crate::glue::crc_calc.checksum(&data) {
                 // Bad packet, skip this start of packet indicator
                 println!("Bad packet: CRC failed");
                 self.serial_buf.rotate_left(index + 1);
