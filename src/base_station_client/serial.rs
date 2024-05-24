@@ -81,7 +81,7 @@ impl Serial {
     }
 
     pub fn send_command(&mut self, id : crate::glue::Radio_SSL_ID , command : crate::glue::Radio_Command) -> Result<(), std::io::Error> {
-        let msg = crate::glue::Radio_Message_Rust::Radio_Command(command).wrap();
+        let msg = crate::glue::Radio_Message_Rust::Command(command).wrap();
         let mw = crate::glue::Radio_MessageWrapper {
             id,
             _pad: [0, 0, 0],

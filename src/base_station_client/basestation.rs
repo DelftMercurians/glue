@@ -40,21 +40,25 @@ impl BaseStation {
                 const LEN_MESSAGE_WRAPER : usize = std::mem::size_of::<crate::glue::Radio_MessageWrapper>();
                 match data.len() {
                     LEN_BASE_INFORMATION => {
-                        if let Some(base_info) = crate::glue::to_base_info(data.try_into().expect("ERR"), None) {
+                        if let Some(base_info) = Base_Information::from_bytes(data) {
                             self.base_info.update(base_info);
                         }
                     },
                     LEN_MESSAGE_WRAPER => {
-                        if let Some((id, message)) = crate::glue::to_radio_message_wrapper(data.try_into().expect("ERR"), None) {
+                        if let Some(msg) = Radio_MessageWrapper::from_bytes(data) {
+                            if msg.id as usize >= MAX_NUM_ROBOTS { continue; } // Invalid robot id, continue to next frame
                             b = true;
-                            if let Some(status_hf) = crate::glue::extract_radio_status_hf(message) {
-                                self.robots[id as usize].update_status_hf(status_hf);
-                            }
-                            if let Some(status_lf) = crate::glue::extract_radio_status_lf(message) {  
-                                self.robots[id as usize].update_status_lf(status_lf);
-                            }
-                            if let Some(imu_reading) = crate::glue::extract_imu(message) {
-                                self.robots[id as usize].update_imu_reading(imu_reading);
+                            match Radio_Message_Rust::unwrap(msg.msg) {
+                                Radio_Message_Rust::PrimaryStatusHF(status_hf) => {
+                                    self.robots[msg.id as usize].update_status_hf(status_hf);
+                                }
+                                Radio_Message_Rust::PrimaryStatusLF(status_lf) => {
+                                    self.robots[msg.id as usize].update_status_lf(status_lf);
+                                }
+                                Radio_Message_Rust::ImuReadings(imu_reading) => {
+                                    self.robots[msg.id as usize].update_imu_reading(imu_reading);
+                                }
+                                _ => println!("Unhandled message type"),
                             }
                         }
                     },

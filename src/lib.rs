@@ -20,7 +20,7 @@ mod tests {
         let mw = Radio_MessageWrapper{
             id: 42,
             _pad: [0, 0, 0],
-            msg: Radio_Message_Rust::Radio_Command(Radio_Command {
+            msg: Radio_Message_Rust::Command(Radio_Command {
                 speed: HG_Pose {
                     x: 0.0,
                     y: 0.0,
