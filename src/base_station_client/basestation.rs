@@ -27,6 +27,10 @@ impl BaseStation {
         })
     }
 
+    pub fn connection_time(&self) -> std::time::Duration {
+        self.start_time.elapsed()
+    }
+
     pub fn read_and_parse(&mut self) -> Result<bool, ()> {
         // Parse contents of serial buffer
         let mut b = false;
@@ -164,7 +168,7 @@ impl Monitor {
     pub fn connect_to(&self, port: &str) -> Result<(),()> {
         if let Some(base_station) = &mut self.get_base_station_mux() {
             **base_station = BaseStation::new(port).ok();
-            if let Some(bs) = &mut **base_station {
+            if let Some(_) = & **base_station {
                 return Ok(())
             }
         }

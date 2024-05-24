@@ -73,13 +73,6 @@ impl Serial {
         ports.into_iter().filter(|p| !filter || Self::is_basestation(&p)).map(|p| p.port_name).collect()
     }
 
-    fn open_port(port_name : &str) -> Box<dyn SerialPort> {
-        serialport::new(port_name, 115200)
-                    .timeout(Duration::from_millis(10))
-                    .open()
-                    .expect("Failed to open port")
-    }
-
     pub fn send(&mut self, line : &str) {
         match self.port.write_all(line.as_bytes()) {
             Ok(()) => (),
