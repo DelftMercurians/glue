@@ -82,7 +82,7 @@ pub struct Monitor {
 impl Monitor {
 
     // Get a mutex on the base station
-    fn get_base_station_mux(&self) -> Option<std::sync::MutexGuard<'_, Option<BaseStation>>> {
+    pub fn get_base_station_mux(&self) -> Option<std::sync::MutexGuard<'_, Option<BaseStation>>> {
         let time_start = std::time::Instant::now();
         loop {
             match self.base_station_mux.try_lock() {
@@ -106,7 +106,7 @@ impl Monitor {
         let _thread_join_handle = std::thread::spawn(move || {
             loop {
                 { // monitor mutex
-                    let start_time = std::time::Instant::now();
+                    // let start_time = std::time::Instant::now();
                     let mut disconnect : bool = false;
                     let mut monitor_mut = mux_clone.lock().unwrap();
                     if let Some(base_station) = &mut *monitor_mut {
@@ -118,7 +118,7 @@ impl Monitor {
                     if disconnect {
                         *monitor_mut = None;   
                     }
-                    println!("time = {:?}", start_time.elapsed());
+                    // println!("time = {:?}", start_time.elapsed());
                 } // monitor mutex
                 std::thread::sleep(std::time::Duration::from_secs(1) / 60); // Give other threads an opportunity to access the mutex
             }
@@ -186,6 +186,15 @@ impl Monitor {
             return self.connect_to(&ports[0]);
         }
         Err(())
+    }
+
+    pub fn is_connected(&self) -> bool {
+        if let Some(base_station) = &mut self.get_base_station_mux() {
+            if let Some(_) = & **base_station {
+                return true
+            }
+        }
+        false
     }
 
     // Disconnect from connected base station (does nothing if not connected already)

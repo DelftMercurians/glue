@@ -6,6 +6,11 @@ pub mod base_station_client;
 pub mod glue;
 pub use glue::*;
 
+pub use base_station_client::basestation::Monitor as Monitor;
+pub use base_station_client::serial::Serial as Serial;
+pub use base_station_client::utils::Stamped as Stamped;
+pub use base_station_client::basestation::MAX_NUM_ROBOTS as MAX_NUM_ROBOTS;
+
 
 
 

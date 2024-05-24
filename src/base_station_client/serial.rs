@@ -118,7 +118,7 @@ impl Serial {
             // Start byte found
 
             if self.glob_index < index + 2 {
-                println!("Buffer not long enough to get a size");
+                // println!("Buffer not long enough to get a size");
                 return None;
             }
             
@@ -126,12 +126,12 @@ impl Serial {
             let len: usize = self.serial_buf[index+1] as usize;
 
             if self.glob_index < index + len + 3 {
-                println!("Buffer not long enough for all data len = {len}");
+                // println!("Buffer not long enough for all data len = {len}");
                 return None;
             }
 
             if len > 50 {
-                println!("Bad packet: size too large");
+                eprintln!("SERIAL: Bad packet: size too large");
                 self.serial_buf.rotate_left(index + 1); // probably quite expensive, consider a circular buffer
                 self.glob_index -= index + 1;
                 return None;
@@ -146,7 +146,7 @@ impl Serial {
 
             if crc != crate::glue::crc_calc.checksum(&data) {
                 // Bad packet, skip this start of packet indicator
-                println!("Bad packet: CRC failed");
+                eprintln!("SERIAL: Bad packet: CRC failed");
                 self.serial_buf.rotate_left(index + 1);
                 self.glob_index -= index + 1;
                 return None;

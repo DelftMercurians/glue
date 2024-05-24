@@ -16,6 +16,20 @@ pub enum Radio_Message_Rust {
     None,
 }
 
+
+impl HG_Version {
+    pub fn version_to_string(&self) -> String {
+        format!("v{}.{}.{}", self.major, self.minor, self.patch)
+    }
+    pub fn protocol_version_to_string(&self) -> String {
+        format!("#{}.{}", self.protocols_major, self.protocols_minor)
+    }
+    pub fn protcol_version_matches(&self) -> bool {
+        (self.protocols_major  == crate::glue::CONST_PROTOCOL_VERSION_MAJOR) &&
+        (self.protocols_minor == crate::glue::CONST_PROTOCOL_VERSION_MINOR)
+    }
+}
+
 impl Radio_Message_Rust {
 
     // Convert into the C representation

@@ -31,17 +31,16 @@ impl Robot {
     //     // self.time.elapsed()
     // }
 
-    pub fn check_for_timeout(&mut self) -> bool {
-        // if self.status == None { return false }
-        // if self.time_since_update() > Duration::from_millis(100) {
-        //     self.status = None;
-        //     for motor in &mut self.motors {
-        //         motor.status = Status::NOREPLY;
-        //     }
-        //     self.kicker.status = Status::NOREPLY;
-        //     self.fan_status = None;
-        //     return true
-        // }
+    pub fn is_online(&self) -> bool {
+        if let Some(d) = self.status_lf.time_since() {
+            if d < std::time::Duration::from_millis(400) { return true; }
+        }
+        if let Some(d) = self.status_hf.time_since() {
+            if d < std::time::Duration::from_millis(200) { return true; }
+        }
+        if let Some(d) = self.imu_reading.time_since() {
+            if d < std::time::Duration::from_millis(200) { return true; }
+        }
         false
     }
 
