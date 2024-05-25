@@ -245,8 +245,8 @@ mod basestation_tests {
         std::thread::sleep(std::time::Duration::from_millis(100));
 
         let monitor = Monitor::start();
-        match monitor.connect_to("COM50") {
-        // match monitor.connect_to_first() {
+        // match monitor.connect_to("COM50") {
+        match monitor.connect_to_first() {
             Ok(_) => println!("Connected successfully"),
             Err(_) => {println!("Conection failed"); return},
         }
@@ -273,7 +273,7 @@ mod basestation_tests {
             });
             // }
 
-            let _ = monitor.send(commands);
+            // let _ = monitor.send(commands);
             // }
             
             
@@ -283,14 +283,14 @@ mod basestation_tests {
                 println!("{:?} => {:?}", timestamp.elapsed(), info);
             }
             if let Some(robots) = monitor.get_robots() {
-                if let Stamped::Have(timestamp, status) = robots[4].status_lf {
-                    println!("{:?} => {:?}", timestamp.elapsed(), status);
+                if let Some(timestamp,) = robots[4].time_since_status_lf_update() {
+                    println!("{:?} => status_lf", timestamp);
                 }
-                if let Stamped::Have(timestamp, status) = robots[4].status_hf {
-                    println!("{:?} => {:?}", timestamp.elapsed(), status);
+                if let Some(timestamp) = robots[4].time_since_status_hf_update() {
+                    println!("{:?} => status_hf", timestamp);
                 }
-                if let Stamped::Have(timestamp, imu_reading) = robots[4].imu_reading {
-                    println!("{:?} => {:?}", timestamp.elapsed(), imu_reading);
+                if let Some(timestamp) = robots[4].time_since_imu_reading_update() {
+                    println!("{:?} => imu_reading", timestamp);
                 }
             }
             println!();

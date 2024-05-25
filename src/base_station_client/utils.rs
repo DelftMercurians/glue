@@ -4,7 +4,7 @@ pub enum Stamped<T> {
     NothingYet,
 }
 
-impl<T> Stamped<T> {
+impl<T: Copy> Stamped<T> {
     pub fn make_now(val : T) -> Stamped<T> {
         Self::Have(std::time::Instant::now(), val)
     }
@@ -16,9 +16,21 @@ impl<T> Stamped<T> {
     pub fn time_since(&self) -> Option<std::time::Duration> {
         match self {
             Self::NothingYet => None,
-            Self::Have(timestamp, _) => Some(std::time::Instant::now() - *timestamp),
+            Self::Have(timestamp, _) => Some(timestamp.elapsed()),
         }
     }
+
+    #[inline]
+    pub fn have<U, F>(&self, f: F) -> Option<U>
+    where
+        F: FnOnce(T) -> U,
+    {
+        match *self {
+            Self::Have(_, t) => Some(f(t)),
+            Self::NothingYet => None,
+        }
+    }
+
 }
 
 #[cfg(test)]

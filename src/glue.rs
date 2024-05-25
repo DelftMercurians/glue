@@ -1,4 +1,4 @@
-
+#![allow(dead_code)]
 
 use num_traits::FromPrimitive;
 pub const crc_calc: crc::Crc<u8> = crc::Crc::<u8>::new(&crc::CRC_8_SMBUS);

@@ -2,15 +2,14 @@
 #![allow(non_camel_case_types)]
 #![allow(non_snake_case)]
 
-pub mod base_station_client;
-pub mod glue;
-pub use glue::*;
+mod base_station_client;
+mod glue;
 
 pub use base_station_client::basestation::Monitor as Monitor;
 pub use base_station_client::serial::Serial as Serial;
 pub use base_station_client::utils::Stamped as Stamped;
 pub use base_station_client::basestation::MAX_NUM_ROBOTS as MAX_NUM_ROBOTS;
-
+pub use glue::{HG_Status, Radio_Message_Rust, Radio_Command, HG_Pose, Radio_MessageWrapper};
 
 
 
@@ -22,11 +21,11 @@ mod tests {
 
     #[test]
     fn test_to_packet() {
-        let mw = Radio_MessageWrapper{
+        let mw = glue::Radio_MessageWrapper{
             id: 42,
             _pad: [0, 0, 0],
-            msg: Radio_Message_Rust::Command(Radio_Command {
-                speed: HG_Pose {
+            msg: glue::Radio_Message_Rust::Command(glue::Radio_Command {
+                speed: glue::HG_Pose {
                     x: 0.0,
                     y: 0.0,
                     z: 0.0,
@@ -38,7 +37,7 @@ mod tests {
                 fan_speed: 3.141,
             },).wrap(),
         };
-        let packet = to_packet(mw);
+        let packet = glue::to_packet(mw);
         println!("packet = {packet:02X?}");
     }
 
