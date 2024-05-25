@@ -27,6 +27,7 @@ impl ParseCallbacks for MacroCallback {
             "Radio_PrimaryStatusHF" | "Radio_PrimaryStatusLF" |
             "Radio_ImuReadings" | "MessageType" | "Radio_Message" | "Radio_KickerCommand" |
             "Radio_Message__bindgen_ty_1" | "Radio_Message__bindgen_ty_1__bindgen_ty_1" | "Radio_Message__bindgen_ty_1__bindgen_ty_2" |
+            "Radio_OdometryReading" | "Radio_OverrideOdometry" |
             "Radio_MessageWrapper" =>
                 vec![
                     "AsBytes".into(),
