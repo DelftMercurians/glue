@@ -11,6 +11,7 @@ const DEBUG_SCROLLBACK_LIMIT : usize = 500;
 pub struct Debug {
     pub incoming_lines : std::collections::vec_deque::VecDeque<(chrono::DateTime<chrono::Local>, String, String)>,
     pub imu_values : [std::collections::vec_deque::VecDeque<(chrono::DateTime<chrono::Local>, Radio_ImuReadings)>; MAX_NUM_ROBOTS],
+    pub odo_values : [std::collections::vec_deque::VecDeque<(chrono::DateTime<chrono::Local>, Radio_OdometryReading)>; MAX_NUM_ROBOTS],
     pub update : bool,
 }
 
@@ -89,7 +90,29 @@ impl BaseStation {
                                         (*dbg).update = true;
                                     }
                                 }
-                                _ => println!("Unhandled message type"),
+                                Radio_Message_Rust::OdometryReading(odo_reading) => {
+                                    // self.robots[msg.id as usize].update_odo_reading(odo_reading);
+                                    if let Some(&mut ref mut dbg) = debug {
+                                        (*dbg).incoming_lines.push_front((chrono::Local::now(), format!("{}", msg.id), format!("{:?}", odo_reading)));
+                                        (*dbg).odo_values[msg.id as usize].push_front((chrono::Local::now(), odo_reading));
+                                        (*dbg).odo_values[msg.id as usize].truncate(DEBUG_SCROLLBACK_LIMIT);
+                                        (*dbg).incoming_lines.truncate(DEBUG_SCROLLBACK_LIMIT);
+                                        (*dbg).update = true;
+                                    }
+                                }
+                                Radio_Message_Rust::OverrideOdometry(over_odo) => {
+                                    // self.robots[msg.id as usize].update_odo_reading(odo_reading);
+                                    if let Some(&mut ref mut dbg) = debug {
+                                        (*dbg).incoming_lines.push_front((chrono::Local::now(), format!("{}", msg.id), format!("{:?}", over_odo)));
+                                        (*dbg).incoming_lines.truncate(DEBUG_SCROLLBACK_LIMIT);
+                                        (*dbg).update = true;
+                                    }
+                                }
+                                _ => {
+                                    if let Some(&mut ref mut dbg) = debug {
+                                        (*dbg).incoming_lines.push_front((chrono::Local::now(), format!("?"), format!("Unknown Message Type")));
+                                    }
+                                },
                             }
                         }
                     },
@@ -155,6 +178,7 @@ impl Monitor {
         let debug_mux: std::sync::Arc<std::sync::Mutex<Debug>> = std::sync::Arc::new(std::sync::Mutex::new(Debug{
             incoming_lines : Default::default(),
             imu_values : Default::default(),
+            odo_values : Default::default(),
             update : false,
         }));
 

@@ -12,6 +12,8 @@ pub enum Radio_Message_Rust {
     // ConfigMessage(Radio_ConfigMessage),
     PrimaryStatusHF(Radio_PrimaryStatusHF),
     PrimaryStatusLF(Radio_PrimaryStatusLF),
+    OdometryReading(Radio_OdometryReading),
+    OverrideOdometry(Radio_OverrideOdometry),
     // Reply(Radio_Reply),
     None,
 }
@@ -50,6 +52,20 @@ impl Radio_Message_Rust {
                         ir,
                         _pad1: [0; 4],
                     }
+                },
+            },
+            Self::OdometryReading(odo) => Radio_Message {
+                mt: Radio_MessageType::OdometryReading,
+                _pad: [0; 3],
+                msg: Radio_Message__bindgen_ty_1 {
+                    odo,
+                },
+            },
+            Self::OverrideOdometry(over_odo) => Radio_Message {
+                mt: Radio_MessageType::OverrideOdometry,
+                _pad: [0; 3],
+                msg: Radio_Message__bindgen_ty_1 {
+                    over_odo,
                 },
             },
             Self::PrimaryStatusHF(ps_hf) => Radio_Message {
@@ -103,6 +119,12 @@ impl Radio_Message_Rust {
                 Radio_MessageType::ImuReadings =>  return Radio_Message_Rust::ImuReadings(msg.msg.__bindgen_anon_2.ir),
                 Radio_MessageType::PrimaryStatusHF => {
                     return Radio_Message_Rust::PrimaryStatusHF(msg.msg.ps_hf)
+                },
+                Radio_MessageType::OdometryReading => {
+                    return Radio_Message_Rust::OdometryReading(msg.msg.odo)
+                },
+                Radio_MessageType::OverrideOdometry => {
+                    return Radio_Message_Rust::OverrideOdometry(msg.msg.over_odo)
                 },
                 Radio_MessageType::PrimaryStatusLF => {
                     // Convert to struct
