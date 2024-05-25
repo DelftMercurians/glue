@@ -9,7 +9,7 @@ pub use base_station_client::basestation::Monitor as Monitor;
 pub use base_station_client::serial::Serial as Serial;
 pub use base_station_client::utils::Stamped as Stamped;
 pub use base_station_client::basestation::MAX_NUM_ROBOTS as MAX_NUM_ROBOTS;
-pub use glue::{HG_Status, Radio_Message_Rust, Radio_Command, HG_Pose, Radio_MessageWrapper};
+pub use glue::{HG_Status, Radio_Message_Rust, Radio_Command, HG_Pose, Radio_MessageWrapper, Radio_ImuReadings};
 
 
 

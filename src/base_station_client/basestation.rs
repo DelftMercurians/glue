@@ -5,6 +5,15 @@ use crate::glue::*;
 
 pub const MAX_NUM_ROBOTS : usize = 16;
 
+const DEBUG_SCROLLBACK_LIMIT : usize = 500;
+
+
+pub struct Debug {
+    pub incoming_lines : std::collections::vec_deque::VecDeque<(chrono::DateTime<chrono::Local>, String, String)>,
+    pub imu_values : [std::collections::vec_deque::VecDeque<(chrono::DateTime<chrono::Local>, Radio_ImuReadings)>; MAX_NUM_ROBOTS],
+    pub update : bool,
+}
+
 #[derive(Debug)]
 pub struct BaseStation {
 
@@ -31,7 +40,7 @@ impl BaseStation {
         self.start_time.elapsed()
     }
 
-    pub fn read_and_parse(&mut self) -> Result<bool, ()> {
+    pub fn read_and_parse(&mut self, debug : Option<&mut Debug>) -> Result<bool, ()> {
         // Parse contents of serial buffer
         let mut b = false;
         loop{
@@ -42,6 +51,11 @@ impl BaseStation {
                     LEN_BASE_INFORMATION => {
                         if let Some(base_info) = Base_Information::from_bytes(data) {
                             self.base_info.update(base_info);
+                            if let Some(&mut ref mut dbg) = debug {
+                                (*dbg).incoming_lines.push_front((chrono::Local::now(), format!("B"), format!("{:?}", base_info)));
+                                (*dbg).incoming_lines.truncate(DEBUG_SCROLLBACK_LIMIT);
+                                (*dbg).update = true;
+                            }
                         }
                     },
                     LEN_MESSAGE_WRAPER => {
@@ -51,12 +65,29 @@ impl BaseStation {
                             match Radio_Message_Rust::unwrap(msg.msg) {
                                 Radio_Message_Rust::PrimaryStatusHF(status_hf) => {
                                     self.robots[msg.id as usize].update_status_hf(status_hf);
+                                    if let Some(&mut ref mut dbg) = debug {
+                                        (*dbg).incoming_lines.push_front((chrono::Local::now(), format!("{}", msg.id), format!("{:?}", status_hf)));
+                                        (*dbg).incoming_lines.truncate(DEBUG_SCROLLBACK_LIMIT);
+                                        (*dbg).update = true;
+                                    }
                                 }
                                 Radio_Message_Rust::PrimaryStatusLF(status_lf) => {
                                     self.robots[msg.id as usize].update_status_lf(status_lf);
+                                    if let Some(&mut ref mut dbg) = debug {
+                                        (*dbg).incoming_lines.push_front((chrono::Local::now(), format!("{}", msg.id), format!("{:?}", status_lf)));
+                                        (*dbg).incoming_lines.truncate(DEBUG_SCROLLBACK_LIMIT);
+                                        (*dbg).update = true;
+                                    }
                                 }
                                 Radio_Message_Rust::ImuReadings(imu_reading) => {
                                     self.robots[msg.id as usize].update_imu_reading(imu_reading);
+                                    if let Some(&mut ref mut dbg) = debug {
+                                        (*dbg).incoming_lines.push_front((chrono::Local::now(), format!("{}", msg.id), format!("{:?}", imu_reading)));
+                                        (*dbg).imu_values[msg.id as usize].push_front((chrono::Local::now(), imu_reading));
+                                        (*dbg).imu_values[msg.id as usize].truncate(DEBUG_SCROLLBACK_LIMIT);
+                                        (*dbg).incoming_lines.truncate(DEBUG_SCROLLBACK_LIMIT);
+                                        (*dbg).update = true;
+                                    }
                                 }
                                 _ => println!("Unhandled message type"),
                             }
@@ -75,8 +106,11 @@ impl BaseStation {
 } // impl Monitor
 
 
+
+
 pub struct Monitor {
     base_station_mux: std::sync::Arc<std::sync::Mutex<Option<BaseStation>>>,
+    debug_mux : std::sync::Arc<std::sync::Mutex<Debug>>,
 }
 
 impl Monitor {
@@ -98,19 +132,44 @@ impl Monitor {
         }
     }
 
+    // Get a mutex on the debug strct
+    pub fn get_debug_mux(&self) -> Option<std::sync::MutexGuard<'_, Debug>> {
+        let time_start = std::time::Instant::now();
+        loop {
+            match self.debug_mux.try_lock() {
+                Ok(monitor_mut) => {
+                    return Some(monitor_mut);
+                }
+                Err(_) => {
+                    if time_start.elapsed() > std::time::Duration::from_millis(40) {
+                        return None
+                    }
+                }
+            }
+        }
+    }
+
     // Start the background monitoring thread
     pub fn start() -> Self {
         let base_station_mux: std::sync::Arc<std::sync::Mutex<Option<BaseStation>>> = std::sync::Arc::new(std::sync::Mutex::new(None));
+        let debug_mux: std::sync::Arc<std::sync::Mutex<Debug>> = std::sync::Arc::new(std::sync::Mutex::new(Debug{
+            incoming_lines : Default::default(),
+            imu_values : Default::default(),
+            update : false,
+        }));
 
         let mux_clone = std::sync::Arc::clone(&base_station_mux);
+        let debug_mux_clone = std::sync::Arc::clone(&debug_mux);
         let _thread_join_handle = std::thread::spawn(move || {
             loop {
                 { // monitor mutex
                     // let start_time = std::time::Instant::now();
                     let mut disconnect : bool = false;
                     let mut monitor_mut = mux_clone.lock().unwrap();
+                    let mut debug_mut = debug_mux_clone.lock().unwrap();
                     if let Some(base_station) = &mut *monitor_mut {
-                        match base_station.read_and_parse() {
+                        let debug = &mut *debug_mut;
+                        match base_station.read_and_parse(Some(debug)) {
                             Ok(_) => (),
                             Err(_) => disconnect = true,
                         };
@@ -125,6 +184,7 @@ impl Monitor {
         });
         Monitor {
             base_station_mux,
+            debug_mux,
         }
     }
 
