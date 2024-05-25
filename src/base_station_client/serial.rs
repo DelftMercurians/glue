@@ -92,6 +92,18 @@ impl Serial {
         self.port.write_all(&bytes)
     }
 
+    pub fn send_over_odo(&mut self, id : crate::glue::Radio_SSL_ID , over_odo : crate::glue::Radio_OverrideOdometry) -> Result<(), std::io::Error> {
+        let msg = crate::glue::Radio_Message_Rust::OverrideOdometry(over_odo).wrap();
+        let mw = crate::glue::Radio_MessageWrapper {
+            id,
+            _pad: [0, 0, 0],
+            msg,
+        };
+        let bytes = crate::glue::to_packet(mw);
+
+        self.port.write_all(&bytes)
+    }
+
     fn read(&mut self) -> Result<(), ()> {
         match self.port.bytes_to_read() {
             Ok(0) => return Ok(()),

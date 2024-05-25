@@ -261,6 +261,19 @@ impl Monitor {
         Err(())
     }
 
+    // Send odometry override
+    pub fn send_over_odo(&self, id : u8, over_odo : crate::glue::Radio_OverrideOdometry) -> Result<(), ()> {
+        if let Some(base_station) = &mut self.get_base_station_mux() {
+            if let Some(bs) = &mut **base_station {
+                match bs.serial.send_over_odo(id, over_odo) {
+                    Ok(_) => (),
+                    Err(_) => return Err(()),
+                }
+            }
+        }
+        Err(())
+    }
+
 
     // Connect to a base station over a serial COM port
     pub fn connect_to(&self, port: &str) -> Result<(),()> {

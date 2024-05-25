@@ -9,7 +9,7 @@ mod glue;
 pub use base_station_client::basestation::{Monitor, MAX_NUM_ROBOTS};
 pub use base_station_client::serial::Serial;
 pub use base_station_client::utils::Stamped;
-pub use glue::{HG_Status, Radio_Message_Rust, Radio_Command, HG_Pose, Radio_MessageWrapper, Radio_ImuReadings, Radio_KickerCommand, Base_Information};
+pub use glue::{HG_Status, Radio_Message_Rust, Radio_Command, HG_Pose, Radio_MessageWrapper, Radio_ImuReadings, Radio_KickerCommand, Base_Information, Radio_OverrideOdometry};
 
 
 
