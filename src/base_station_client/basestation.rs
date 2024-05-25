@@ -76,7 +76,7 @@ impl BaseStation {
 
 
 pub struct Monitor {
-    pub base_station_mux: std::sync::Arc<std::sync::Mutex<Option<BaseStation>>>,
+    base_station_mux: std::sync::Arc<std::sync::Mutex<Option<BaseStation>>>,
 }
 
 impl Monitor {
