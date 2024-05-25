@@ -116,7 +116,7 @@ pub struct Monitor {
 impl Monitor {
 
     // Get a mutex on the base station
-    pub fn get_base_station_mux(&self) -> Option<std::sync::MutexGuard<'_, Option<BaseStation>>> {
+    fn get_base_station_mux(&self) -> Option<std::sync::MutexGuard<'_, Option<BaseStation>>> {
         let time_start = std::time::Instant::now();
         loop {
             match self.base_station_mux.try_lock() {
@@ -198,6 +198,16 @@ impl Monitor {
             }
         }
         Stamped::NothingYet
+    }
+
+    // Get base station connection duration
+    pub fn base_connection_duration(&self) -> Option<std::time::Duration> {
+        if let Some(base_station) = &mut self.get_base_station_mux() {
+            if let Some(bs) = & (**base_station) {
+                return Some(bs.connection_time())
+            }
+        }
+        None
     }
 
     // Get robots, read only
@@ -326,7 +336,7 @@ mod basestation_tests {
                     z: 0.0,
                 },
                 dribbler_speed: 2.0,
-                kicker_command: b'T',
+                kicker_command: Radio_KickerCommand::NONE,
                 _pad: [0, 0, 0],
                 kick_time: 1.0,
                 fan_speed: 2.0,

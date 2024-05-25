@@ -5,11 +5,11 @@
 mod base_station_client;
 mod glue;
 
-pub use base_station_client::basestation::Monitor as Monitor;
-pub use base_station_client::serial::Serial as Serial;
-pub use base_station_client::utils::Stamped as Stamped;
-pub use base_station_client::basestation::MAX_NUM_ROBOTS as MAX_NUM_ROBOTS;
-pub use glue::{HG_Status, Radio_Message_Rust, Radio_Command, HG_Pose, Radio_MessageWrapper, Radio_ImuReadings};
+// Only export stuff that's useful to the outside world
+pub use base_station_client::basestation::{Monitor, MAX_NUM_ROBOTS};
+pub use base_station_client::serial::Serial;
+pub use base_station_client::utils::Stamped;
+pub use glue::{HG_Status, Radio_Message_Rust, Radio_Command, HG_Pose, Radio_MessageWrapper, Radio_ImuReadings, Radio_KickerCommand, Base_Information};
 
 
 
@@ -31,7 +31,7 @@ mod tests {
                     z: 0.0,
                 },
                 dribbler_speed: 5.0,
-                kicker_command: b'T',
+                kicker_command: glue::Radio_KickerCommand::NONE,
                 _pad: [0, 0, 0],
                 kick_time: 2.0,
                 fan_speed: 3.141,
