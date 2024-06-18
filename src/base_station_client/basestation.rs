@@ -116,7 +116,11 @@ impl BaseStation {
                             }
                         }
                     },
-                    _ => ()
+                    _ => {
+                        if let Some(&mut ref mut dbg) = debug {
+                            (*dbg).incoming_lines.push_front((chrono::Local::now(), format!("?"), format!("Unknown Data: {:?}", String::from_utf8(data))));
+                        }
+                    }
                 }
             } else {
                 break;
