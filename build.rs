@@ -65,7 +65,6 @@ fn main() {
         .raw_line("use num_derive::{ToPrimitive,FromPrimitive};")
         .raw_line("use zerocopy_derive::AsBytes;")
         .raw_line("use strum_macros::EnumIter;")
-        .raw_line("use strum::IntoEnumIterator;")
         .header("wrapper.hpp")
         .derive_debug(true)
         .rustified_enum("HG::Status")

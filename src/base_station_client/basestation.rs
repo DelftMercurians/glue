@@ -1,5 +1,3 @@
-use std::char::MAX;
-
 use super::utils::Stamped;
 use super::robot::*;
 use super::serial::*;
@@ -14,7 +12,7 @@ pub struct Debug {
     pub incoming_lines : std::collections::vec_deque::VecDeque<(chrono::DateTime<chrono::Local>, String, String)>,
     pub imu_values : [std::collections::vec_deque::VecDeque<(chrono::DateTime<chrono::Local>, Radio_ImuReadings)>; MAX_NUM_ROBOTS],
     pub odo_values : [std::collections::vec_deque::VecDeque<(chrono::DateTime<chrono::Local>, Radio_OdometryReading)>; MAX_NUM_ROBOTS],
-    pub config_variable_returns : [[u32; 256]; MAX_NUM_ROBOTS],
+    pub config_variable_returns : [[Stamped<u32>; 256]; MAX_NUM_ROBOTS],
     pub update : bool,
 }
 
@@ -119,10 +117,10 @@ impl BaseStation {
                                         (*dbg).update = true;
 
                                         match mcm.operation {
-                                            HG_ConfigOperation::READ_RETURN => {
+                                            HG_ConfigOperation::READ_RETURN | HG_ConfigOperation::WRITE_RETURN => {
                                                 for i in 0..5 {
                                                     if mcm.vars[i] == HG_Variable::NONE { continue }
-                                                    (*dbg).config_variable_returns[msg.id as usize][mcm.vars[i] as usize] = mcm.values[i];
+                                                    (*dbg).config_variable_returns[msg.id as usize][mcm.vars[i] as usize] = Stamped::make_now(mcm.values[i]);
                                                 }
                                             },
                                             _ => (),
@@ -204,7 +202,7 @@ impl Monitor {
             incoming_lines : Default::default(),
             imu_values : Default::default(),
             odo_values : Default::default(),
-            config_variable_returns : [[0;256];MAX_NUM_ROBOTS],
+            config_variable_returns : [[Stamped::NothingYet;256];MAX_NUM_ROBOTS],
             update : false,
         }));
 
