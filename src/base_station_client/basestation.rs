@@ -1,3 +1,5 @@
+use std::char::MAX;
+
 use super::utils::Stamped;
 use super::robot::*;
 use super::serial::*;
@@ -12,6 +14,7 @@ pub struct Debug {
     pub incoming_lines : std::collections::vec_deque::VecDeque<(chrono::DateTime<chrono::Local>, String, String)>,
     pub imu_values : [std::collections::vec_deque::VecDeque<(chrono::DateTime<chrono::Local>, Radio_ImuReadings)>; MAX_NUM_ROBOTS],
     pub odo_values : [std::collections::vec_deque::VecDeque<(chrono::DateTime<chrono::Local>, Radio_OdometryReading)>; MAX_NUM_ROBOTS],
+    pub config_variable_returns : [[u32; 256]; MAX_NUM_ROBOTS],
     pub update : bool,
 }
 
@@ -108,9 +111,27 @@ impl BaseStation {
                                         (*dbg).update = true;
                                     }
                                 }
+                                Radio_Message_Rust::MultiConfigMessage(mcm) => {
+                                    // self.robots[msg.id as usize].update_odo_reading(odo_reading);
+                                    if let Some(&mut ref mut dbg) = debug {
+                                        (*dbg).incoming_lines.push_front((chrono::Local::now(), format!("{}", msg.id), format!("{:?}", mcm)));
+                                        (*dbg).incoming_lines.truncate(DEBUG_SCROLLBACK_LIMIT);
+                                        (*dbg).update = true;
+
+                                        match mcm.operation {
+                                            HG_ConfigOperation::READ_RETURN => {
+                                                for i in 0..5 {
+                                                    if mcm.vars[i] == HG_Variable::NONE { continue }
+                                                    (*dbg).config_variable_returns[msg.id as usize][mcm.vars[i] as usize] = mcm.values[i];
+                                                }
+                                            },
+                                            _ => (),
+                                        }
+                                    }
+                                }
                                 _ => {
                                     if let Some(&mut ref mut dbg) = debug {
-                                        (*dbg).incoming_lines.push_front((chrono::Local::now(), format!("?"), format!("Unknown Message Type")));
+                                        (*dbg).incoming_lines.push_front((chrono::Local::now(), format!("{}", msg.id), format!("Unknown Message Type")));
                                     }
                                 },
                             }
@@ -183,6 +204,7 @@ impl Monitor {
             incoming_lines : Default::default(),
             imu_values : Default::default(),
             odo_values : Default::default(),
+            config_variable_returns : [[0;256];MAX_NUM_ROBOTS],
             update : false,
         }));
 
@@ -259,6 +281,18 @@ impl Monitor {
                             Err(_) => return Err(()),
                         }
                     }
+                }
+            }
+        }
+        Err(())
+    }
+
+    pub fn send_mcm(&self, id : crate::glue::Radio_SSL_ID , mcm : crate::glue::Radio_MultiConfigMessage) -> Result<(), ()> {
+        if let Some(base_station) = &mut self.get_base_station_mux() {
+            if let Some(bs) = &mut **base_station {
+                match bs.serial.send_mcm(id as u8, mcm) {
+                    Ok(_) => (),
+                    Err(_) => return Err(()),
                 }
             }
         }

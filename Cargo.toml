@@ -13,6 +13,8 @@ serialport = "4.3.0"
 zerocopy = "0.7.34"
 zerocopy-derive = "0.7.34"
 chrono = "0.4.31"
+strum = "0.26"
+strum_macros = "0.26"
 
 [build-dependencies]
 bindgen = "0.69.4"

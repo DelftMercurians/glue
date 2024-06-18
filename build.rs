@@ -27,10 +27,15 @@ impl ParseCallbacks for MacroCallback {
             "Radio_PrimaryStatusHF" | "Radio_PrimaryStatusLF" |
             "Radio_ImuReadings" | "MessageType" | "Radio_Message" | "Radio_KickerCommand" |
             "Radio_Message__bindgen_ty_1" | "Radio_Message__bindgen_ty_1__bindgen_ty_1" | "Radio_Message__bindgen_ty_1__bindgen_ty_2" |
-            "Radio_MultiConfigMessage" | "HG_ConfigOperation" | "HG_VariableType" | "HG_Variable" |
+            "Radio_MultiConfigMessage" | "HG_ConfigOperation" | "HG_VariableType" |
             "Radio_OdometryReading" | "Radio_OverrideOdometry" |
             "Radio_MessageWrapper" =>
                 vec![
+                    "AsBytes".into(),
+                ],
+            "HG_Variable" =>
+                vec![
+                    "EnumIter".into(),
                     "AsBytes".into(),
                 ],
             _ => vec![],
@@ -59,6 +64,8 @@ fn main() {
         // bindings for.
         .raw_line("use num_derive::{ToPrimitive,FromPrimitive};")
         .raw_line("use zerocopy_derive::AsBytes;")
+        .raw_line("use strum_macros::EnumIter;")
+        .raw_line("use strum::IntoEnumIterator;")
         .header("wrapper.hpp")
         .derive_debug(true)
         .rustified_enum("HG::Status")
