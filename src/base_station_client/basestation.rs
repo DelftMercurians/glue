@@ -117,7 +117,7 @@ impl BaseStation {
                                         (*dbg).update = true;
 
                                         match mcm.operation {
-                                            HG_ConfigOperation::READ_RETURN | HG_ConfigOperation::WRITE_RETURN => {
+                                            HG_ConfigOperation::READ_RETURN | HG_ConfigOperation::WRITE_RETURN | HG_ConfigOperation::SET_DEFAULT_RETURN => {
                                                 for i in 0..5 {
                                                     if mcm.vars[i] == HG_Variable::NONE { continue }
                                                     (*dbg).config_variable_returns[msg.id as usize][mcm.vars[i] as usize] = Stamped::make_now(mcm.values[i]);

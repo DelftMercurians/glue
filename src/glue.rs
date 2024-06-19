@@ -48,6 +48,16 @@ impl Radio_MultiConfigMessage {
             values: [0; 5],
         }
     }
+
+    pub fn set_default() -> Self {
+        Radio_MultiConfigMessage{
+            vars: [HG_Variable::NONE; 5],
+            operation: HG_ConfigOperation::SET_DEFAULT,
+            type_: HG_VariableType::VOID,
+            _pad: 0,
+            values: [0; 5],
+        }
+    }
 }
 
 
