@@ -17,7 +17,8 @@ impl Serial {
         Ok(Serial {
             port: serialport::new(port_name, 115200)
                             .timeout(Duration::from_millis(10))
-                            .open()?,
+                            .open()
+                            .map_err(|err| eprintln!("serial error: {err:?}"))?,?,
             serial_buf: vec![0; SERIAL_BUF_LEN],
             glob_index: 0,
         })
