@@ -1,39 +1,37 @@
 use serialport::SerialPort;
-use std::time::Duration;
 use std::io;
+use std::time::Duration;
 // use crate::glue::*;
 
 const SERIAL_BUF_LEN: usize = 100000;
 
 #[derive(Debug)]
 pub struct Serial {
-    port : Box<dyn SerialPort>,
+    port: Box<dyn SerialPort>,
     serial_buf: Vec<u8>,
     glob_index: usize,
 }
 
 impl Serial {
-    pub fn new(port_name : &str) -> Result<Serial, serialport::Error> {
+    pub fn new(port_name: &str) -> Result<Serial, serialport::Error> {
         Ok(Serial {
-            port: serialport::new(port_name, 115200)
-                            .timeout(Duration::from_millis(10))
-                            .open()
-                            .map_err(|err| eprintln!("serial error: {err:?}"))?,?,
+            port: serialport::new(port_name, 115200).timeout(Duration::from_millis(10)).open().map_err(|err| {
+                eprintln!("serial error: {err:?}");
+                err
+            })?,
             serial_buf: vec![0; SERIAL_BUF_LEN],
             glob_index: 0,
         })
     }
 
-    fn is_basestation(port : &serialport::SerialPortInfo) -> bool {
+    fn is_basestation(port: &serialport::SerialPortInfo) -> bool {
         match &port.port_type {
-            serialport::SerialPortType::UsbPort(info) => {
-                (info.vid == 0x0483) && (info.pid == 0x5740)
-            },
-            _ => false
+            serialport::SerialPortType::UsbPort(info) => (info.vid == 0x0483) && (info.pid == 0x5740),
+            _ => false,
         }
     }
 
-    pub fn list_ports(filter : bool) -> Vec<String> {
+    pub fn list_ports(filter: bool) -> Vec<String> {
         let ports = serialport::available_ports().expect("No ports found!");
         // for p in &ports {
         //     println!("  {}", p.port_name);
@@ -74,32 +72,24 @@ impl Serial {
         ports.into_iter().filter(|p| !filter || Self::is_basestation(&p)).map(|p| p.port_name).collect()
     }
 
-    pub fn send(&mut self, line : &str) {
+    pub fn send(&mut self, line: &str) {
         match self.port.write_all(line.as_bytes()) {
             Ok(()) => (),
             Err(e) => eprintln!("{:?}", e),
         };
     }
 
-    pub fn send_command(&mut self, id : crate::glue::Radio_SSL_ID , command : crate::glue::Radio_Command) -> Result<(), std::io::Error> {
+    pub fn send_command(&mut self, id: crate::glue::Radio_SSL_ID, command: crate::glue::Radio_Command) -> Result<(), std::io::Error> {
         let msg = crate::glue::Radio_Message_Rust::Command(command).wrap();
-        let mw = crate::glue::Radio_MessageWrapper {
-            id,
-            _pad: [0, 0, 0],
-            msg,
-        };
+        let mw = crate::glue::Radio_MessageWrapper { id, _pad: [0, 0, 0], msg };
         let bytes = crate::glue::to_packet(mw);
 
         self.port.write_all(&bytes)
     }
 
-    pub fn send_over_odo(&mut self, id : crate::glue::Radio_SSL_ID , over_odo : crate::glue::Radio_OverrideOdometry) -> Result<(), std::io::Error> {
+    pub fn send_over_odo(&mut self, id: crate::glue::Radio_SSL_ID, over_odo: crate::glue::Radio_OverrideOdometry) -> Result<(), std::io::Error> {
         let msg = crate::glue::Radio_Message_Rust::OverrideOdometry(over_odo).wrap();
-        let mw = crate::glue::Radio_MessageWrapper {
-            id,
-            _pad: [0, 0, 0],
-            msg,
-        };
+        let mw = crate::glue::Radio_MessageWrapper { id, _pad: [0, 0, 0], msg };
         let bytes = crate::glue::to_packet(mw);
 
         self.port.write_all(&bytes)
@@ -115,14 +105,14 @@ impl Serial {
             Ok(length) => {
                 self.glob_index += length;
                 if self.glob_index == SERIAL_BUF_LEN {
-                    panic!("Buffer is full");   // TODO figure out what to do here
+                    panic!("Buffer is full"); // TODO figure out what to do here
                 }
-                return Ok(())
+                return Ok(());
             }
             Err(ref e) if e.kind() == io::ErrorKind::TimedOut => eprintln!("{:?}", e),
             Err(e) => eprintln!("{:?}", e),
         }
-        return Err(())
+        return Err(());
     }
 
     pub fn read_packet(&mut self) -> Option<Vec<u8>> {
@@ -134,9 +124,9 @@ impl Serial {
                 // println!("Buffer not long enough to get a size");
                 return None;
             }
-            
+
             // Length of data
-            let len: usize = self.serial_buf[index+1] as usize;
+            let len: usize = self.serial_buf[index + 1] as usize;
 
             if self.glob_index < index + len + 3 {
                 // println!("Buffer not long enough for all data len = {len}");
@@ -150,7 +140,7 @@ impl Serial {
                 return None;
             }
 
-            let data = self.serial_buf[(index+2)..(index+2+len)].to_vec();
+            let data = self.serial_buf[(index + 2)..(index + 2 + len)].to_vec();
 
             let crc = self.serial_buf[index + 2 + len];
 
