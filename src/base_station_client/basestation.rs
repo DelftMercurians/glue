@@ -1,24 +1,29 @@
-use super::utils::Stamped;
 use super::robot::*;
 use super::serial::*;
+use super::utils::Stamped;
 use crate::glue::*;
 
-pub const MAX_NUM_ROBOTS : usize = 16;
+pub const MAX_NUM_ROBOTS: usize = 16;
 
-const DEBUG_SCROLLBACK_LIMIT : usize = 500;
-
+const DEBUG_SCROLLBACK_LIMIT: usize = 500;
 
 pub struct Debug {
-    pub incoming_lines : std::collections::vec_deque::VecDeque<(chrono::DateTime<chrono::Local>, String, String)>,
-    pub imu_values : [std::collections::vec_deque::VecDeque<(chrono::DateTime<chrono::Local>, Radio_ImuReadings)>; MAX_NUM_ROBOTS],
-    pub odo_values : [std::collections::vec_deque::VecDeque<(chrono::DateTime<chrono::Local>, Radio_OdometryReading)>; MAX_NUM_ROBOTS],
-    pub config_variable_returns : [[Stamped<u32>; 256]; MAX_NUM_ROBOTS],
-    pub update : bool,
+    pub incoming_lines:
+        std::collections::vec_deque::VecDeque<(chrono::DateTime<chrono::Local>, String, String)>,
+    pub imu_values: [std::collections::vec_deque::VecDeque<(
+        chrono::DateTime<chrono::Local>,
+        Radio_ImuReadings,
+    )>; MAX_NUM_ROBOTS],
+    pub odo_values: [std::collections::vec_deque::VecDeque<(
+        chrono::DateTime<chrono::Local>,
+        Radio_OdometryReading,
+    )>; MAX_NUM_ROBOTS],
+    pub config_variable_returns: [[Stamped<u32>; 256]; MAX_NUM_ROBOTS],
+    pub update: bool,
 }
 
 #[derive(Debug)]
 pub struct BaseStation {
-
     pub robots: [Robot; MAX_NUM_ROBOTS],
     pub base_info: Stamped<Base_Information>,
 
@@ -27,7 +32,7 @@ pub struct BaseStation {
 }
 
 impl BaseStation {
-    pub fn new(port_name : &str) -> Result<BaseStation, serialport::Error> {
+    pub fn new(port_name: &str) -> Result<BaseStation, serialport::Error> {
         let serial = Serial::new(port_name)?;
         let start_time = std::time::Instant::now();
         Ok(BaseStation {
@@ -42,33 +47,45 @@ impl BaseStation {
         self.start_time.elapsed()
     }
 
-    pub fn read_and_parse(&mut self, debug : Option<&mut Debug>) -> Result<bool, ()> {
+    pub fn read_and_parse(&mut self, debug: Option<&mut Debug>) -> Result<bool, ()> {
         // Parse contents of serial buffer
         let mut b = false;
-        loop{
+        loop {
             if let Some(data) = self.serial.read_packet() {
-                const LEN_BASE_INFORMATION : usize = std::mem::size_of::<crate::glue::Base_Information>();
-                const LEN_MESSAGE_WRAPER : usize = std::mem::size_of::<crate::glue::Radio_MessageWrapper>();
+                const LEN_BASE_INFORMATION: usize =
+                    std::mem::size_of::<crate::glue::Base_Information>();
+                const LEN_MESSAGE_WRAPER: usize =
+                    std::mem::size_of::<crate::glue::Radio_MessageWrapper>();
                 match data.len() {
                     LEN_BASE_INFORMATION => {
                         if let Some(base_info) = Base_Information::from_bytes(data) {
                             self.base_info.update(base_info);
                             if let Some(&mut ref mut dbg) = debug {
-                                (*dbg).incoming_lines.push_front((chrono::Local::now(), format!("B"), format!("{:?}", base_info)));
+                                (*dbg).incoming_lines.push_front((
+                                    chrono::Local::now(),
+                                    format!("B"),
+                                    format!("{:?}", base_info),
+                                ));
                                 (*dbg).incoming_lines.truncate(DEBUG_SCROLLBACK_LIMIT);
                                 (*dbg).update = true;
                             }
                         }
-                    },
+                    }
                     LEN_MESSAGE_WRAPER => {
                         if let Some(msg) = Radio_MessageWrapper::from_bytes(data) {
-                            if msg.id as usize >= MAX_NUM_ROBOTS { continue; } // Invalid robot id, continue to next frame
+                            if msg.id as usize >= MAX_NUM_ROBOTS {
+                                continue;
+                            } // Invalid robot id, continue to next frame
                             b = true;
                             match Radio_Message_Rust::unwrap(msg.msg) {
                                 Radio_Message_Rust::PrimaryStatusHF(status_hf) => {
                                     self.robots[msg.id as usize].update_status_hf(status_hf);
                                     if let Some(&mut ref mut dbg) = debug {
-                                        (*dbg).incoming_lines.push_front((chrono::Local::now(), format!("{}", msg.id), format!("{:?}", status_hf)));
+                                        (*dbg).incoming_lines.push_front((
+                                            chrono::Local::now(),
+                                            format!("{}", msg.id),
+                                            format!("{:?}", status_hf),
+                                        ));
                                         (*dbg).incoming_lines.truncate(DEBUG_SCROLLBACK_LIMIT);
                                         (*dbg).update = true;
                                     }
@@ -76,7 +93,11 @@ impl BaseStation {
                                 Radio_Message_Rust::PrimaryStatusLF(status_lf) => {
                                     self.robots[msg.id as usize].update_status_lf(status_lf);
                                     if let Some(&mut ref mut dbg) = debug {
-                                        (*dbg).incoming_lines.push_front((chrono::Local::now(), format!("{}", msg.id), format!("{:?}", status_lf)));
+                                        (*dbg).incoming_lines.push_front((
+                                            chrono::Local::now(),
+                                            format!("{}", msg.id),
+                                            format!("{:?}", status_lf),
+                                        ));
                                         (*dbg).incoming_lines.truncate(DEBUG_SCROLLBACK_LIMIT);
                                         (*dbg).update = true;
                                     }
@@ -84,9 +105,15 @@ impl BaseStation {
                                 Radio_Message_Rust::ImuReadings(imu_reading) => {
                                     self.robots[msg.id as usize].update_imu_reading(imu_reading);
                                     if let Some(&mut ref mut dbg) = debug {
-                                        (*dbg).incoming_lines.push_front((chrono::Local::now(), format!("{}", msg.id), format!("{:?}", imu_reading)));
-                                        (*dbg).imu_values[msg.id as usize].push_front((chrono::Local::now(), imu_reading));
-                                        (*dbg).imu_values[msg.id as usize].truncate(DEBUG_SCROLLBACK_LIMIT);
+                                        (*dbg).incoming_lines.push_front((
+                                            chrono::Local::now(),
+                                            format!("{}", msg.id),
+                                            format!("{:?}", imu_reading),
+                                        ));
+                                        (*dbg).imu_values[msg.id as usize]
+                                            .push_front((chrono::Local::now(), imu_reading));
+                                        (*dbg).imu_values[msg.id as usize]
+                                            .truncate(DEBUG_SCROLLBACK_LIMIT);
                                         (*dbg).incoming_lines.truncate(DEBUG_SCROLLBACK_LIMIT);
                                         (*dbg).update = true;
                                     }
@@ -94,9 +121,15 @@ impl BaseStation {
                                 Radio_Message_Rust::OdometryReading(odo_reading) => {
                                     // self.robots[msg.id as usize].update_odo_reading(odo_reading);
                                     if let Some(&mut ref mut dbg) = debug {
-                                        (*dbg).incoming_lines.push_front((chrono::Local::now(), format!("{}", msg.id), format!("{:?}", odo_reading)));
-                                        (*dbg).odo_values[msg.id as usize].push_front((chrono::Local::now(), odo_reading));
-                                        (*dbg).odo_values[msg.id as usize].truncate(DEBUG_SCROLLBACK_LIMIT);
+                                        (*dbg).incoming_lines.push_front((
+                                            chrono::Local::now(),
+                                            format!("{}", msg.id),
+                                            format!("{:?}", odo_reading),
+                                        ));
+                                        (*dbg).odo_values[msg.id as usize]
+                                            .push_front((chrono::Local::now(), odo_reading));
+                                        (*dbg).odo_values[msg.id as usize]
+                                            .truncate(DEBUG_SCROLLBACK_LIMIT);
                                         (*dbg).incoming_lines.truncate(DEBUG_SCROLLBACK_LIMIT);
                                         (*dbg).update = true;
                                     }
@@ -104,7 +137,11 @@ impl BaseStation {
                                 Radio_Message_Rust::OverrideOdometry(over_odo) => {
                                     // self.robots[msg.id as usize].update_odo_reading(odo_reading);
                                     if let Some(&mut ref mut dbg) = debug {
-                                        (*dbg).incoming_lines.push_front((chrono::Local::now(), format!("{}", msg.id), format!("{:?}", over_odo)));
+                                        (*dbg).incoming_lines.push_front((
+                                            chrono::Local::now(),
+                                            format!("{}", msg.id),
+                                            format!("{:?}", over_odo),
+                                        ));
                                         (*dbg).incoming_lines.truncate(DEBUG_SCROLLBACK_LIMIT);
                                         (*dbg).update = true;
                                     }
@@ -112,32 +149,51 @@ impl BaseStation {
                                 Radio_Message_Rust::MultiConfigMessage(mcm) => {
                                     // self.robots[msg.id as usize].update_odo_reading(odo_reading);
                                     if let Some(&mut ref mut dbg) = debug {
-                                        (*dbg).incoming_lines.push_front((chrono::Local::now(), format!("{}", msg.id), format!("{:?}", mcm)));
+                                        (*dbg).incoming_lines.push_front((
+                                            chrono::Local::now(),
+                                            format!("{}", msg.id),
+                                            format!("{:?}", mcm),
+                                        ));
                                         (*dbg).incoming_lines.truncate(DEBUG_SCROLLBACK_LIMIT);
                                         (*dbg).update = true;
 
                                         match mcm.operation {
-                                            HG_ConfigOperation::READ_RETURN | HG_ConfigOperation::WRITE_RETURN | HG_ConfigOperation::SET_DEFAULT_RETURN => {
+                                            HG_ConfigOperation::READ_RETURN
+                                            | HG_ConfigOperation::WRITE_RETURN
+                                            | HG_ConfigOperation::SET_DEFAULT_RETURN => {
                                                 for i in 0..5 {
-                                                    if mcm.vars[i] == HG_Variable::NONE { continue }
-                                                    (*dbg).config_variable_returns[msg.id as usize][mcm.vars[i] as usize] = Stamped::make_now(mcm.values[i]);
+                                                    if mcm.vars[i] == HG_Variable::NONE {
+                                                        continue;
+                                                    }
+                                                    (*dbg).config_variable_returns
+                                                        [msg.id as usize]
+                                                        [mcm.vars[i] as usize] =
+                                                        Stamped::make_now(mcm.values[i]);
                                                 }
-                                            },
+                                            }
                                             _ => (),
                                         }
                                     }
                                 }
                                 _ => {
                                     if let Some(&mut ref mut dbg) = debug {
-                                        (*dbg).incoming_lines.push_front((chrono::Local::now(), format!("{}", msg.id), format!("Unknown Message Type")));
+                                        (*dbg).incoming_lines.push_front((
+                                            chrono::Local::now(),
+                                            format!("{}", msg.id),
+                                            format!("Unknown Message Type"),
+                                        ));
                                     }
-                                },
+                                }
                             }
                         }
-                    },
+                    }
                     _ => {
                         if let Some(&mut ref mut dbg) = debug {
-                            (*dbg).incoming_lines.push_front((chrono::Local::now(), format!("?"), format!("Unknown Data: {:?}", String::from_utf8(data))));
+                            (*dbg).incoming_lines.push_front((
+                                chrono::Local::now(),
+                                format!("?"),
+                                format!("Unknown Data: {:?}", String::from_utf8(data)),
+                            ));
                         }
                     }
                 }
@@ -147,20 +203,14 @@ impl BaseStation {
         }
         Ok(b)
     }
-
-    
 } // impl Monitor
-
-
-
 
 pub struct Monitor {
     base_station_mux: std::sync::Arc<std::sync::Mutex<Option<BaseStation>>>,
-    debug_mux : std::sync::Arc<std::sync::Mutex<Debug>>,
+    debug_mux: std::sync::Arc<std::sync::Mutex<Debug>>,
 }
 
 impl Monitor {
-
     // Get a mutex on the base station
     fn get_base_station_mux(&self) -> Option<std::sync::MutexGuard<'_, Option<BaseStation>>> {
         let time_start = std::time::Instant::now();
@@ -171,7 +221,7 @@ impl Monitor {
                 }
                 Err(_) => {
                     if time_start.elapsed() > std::time::Duration::from_millis(40) {
-                        return None
+                        return None;
                     }
                 }
             }
@@ -188,7 +238,7 @@ impl Monitor {
                 }
                 Err(_) => {
                     if time_start.elapsed() > std::time::Duration::from_millis(40) {
-                        return None
+                        return None;
                     }
                 }
             }
@@ -197,22 +247,25 @@ impl Monitor {
 
     // Start the background monitoring thread
     pub fn start() -> Self {
-        let base_station_mux: std::sync::Arc<std::sync::Mutex<Option<BaseStation>>> = std::sync::Arc::new(std::sync::Mutex::new(None));
-        let debug_mux: std::sync::Arc<std::sync::Mutex<Debug>> = std::sync::Arc::new(std::sync::Mutex::new(Debug{
-            incoming_lines : Default::default(),
-            imu_values : Default::default(),
-            odo_values : Default::default(),
-            config_variable_returns : [[Stamped::NothingYet;256];MAX_NUM_ROBOTS],
-            update : false,
-        }));
+        let base_station_mux: std::sync::Arc<std::sync::Mutex<Option<BaseStation>>> =
+            std::sync::Arc::new(std::sync::Mutex::new(None));
+        let debug_mux: std::sync::Arc<std::sync::Mutex<Debug>> =
+            std::sync::Arc::new(std::sync::Mutex::new(Debug {
+                incoming_lines: Default::default(),
+                imu_values: Default::default(),
+                odo_values: Default::default(),
+                config_variable_returns: [[Stamped::NothingYet; 256]; MAX_NUM_ROBOTS],
+                update: false,
+            }));
 
         let mux_clone = std::sync::Arc::clone(&base_station_mux);
         let debug_mux_clone = std::sync::Arc::clone(&debug_mux);
         let _thread_join_handle = std::thread::spawn(move || {
             loop {
-                { // monitor mutex
+                {
+                    // monitor mutex
                     // let start_time = std::time::Instant::now();
-                    let mut disconnect : bool = false;
+                    let mut disconnect: bool = false;
                     let mut monitor_mut = mux_clone.lock().unwrap();
                     let mut debug_mut = debug_mux_clone.lock().unwrap();
                     if let Some(base_station) = &mut *monitor_mut {
@@ -223,7 +276,7 @@ impl Monitor {
                         };
                     }
                     if disconnect {
-                        *monitor_mut = None;   
+                        *monitor_mut = None;
                     }
                     // println!("time = {:?}", start_time.elapsed());
                 } // monitor mutex
@@ -236,12 +289,10 @@ impl Monitor {
         }
     }
 
-    
-
     // Get base station info
     pub fn get_base_info(&self) -> Stamped<Base_Information> {
         if let Some(base_station) = &mut self.get_base_station_mux() {
-            if let Some(bs) = & (**base_station) {
+            if let Some(bs) = &(**base_station) {
                 return bs.base_info.clone();
             }
         }
@@ -251,8 +302,8 @@ impl Monitor {
     // Get base station connection duration
     pub fn base_connection_duration(&self) -> Option<std::time::Duration> {
         if let Some(base_station) = &mut self.get_base_station_mux() {
-            if let Some(bs) = & (**base_station) {
-                return Some(bs.connection_time())
+            if let Some(bs) = &(**base_station) {
+                return Some(bs.connection_time());
             }
         }
         None
@@ -261,7 +312,7 @@ impl Monitor {
     // Get robots, read only
     pub fn get_robots(&self) -> Option<[Robot; MAX_NUM_ROBOTS]> {
         if let Some(base_station) = &mut self.get_base_station_mux() {
-            if let Some(bs) = & (**base_station) {
+            if let Some(bs) = &(**base_station) {
                 return Some(bs.robots.clone());
             }
         }
@@ -269,7 +320,10 @@ impl Monitor {
     }
 
     // Send command to robot
-    pub fn send(&self, commands : [Option<crate::glue::Radio_Command>; MAX_NUM_ROBOTS]) -> Result<(), ()> {
+    pub fn send(
+        &self,
+        commands: [Option<crate::glue::Radio_Command>; MAX_NUM_ROBOTS],
+    ) -> Result<(), ()> {
         if let Some(base_station) = &mut self.get_base_station_mux() {
             if let Some(bs) = &mut **base_station {
                 for i in 0..MAX_NUM_ROBOTS {
@@ -285,7 +339,11 @@ impl Monitor {
         Err(())
     }
 
-    pub fn send_mcm(&self, id : crate::glue::Radio_SSL_ID , mcm : crate::glue::Radio_MultiConfigMessage) -> Result<(), ()> {
+    pub fn send_mcm(
+        &self,
+        id: crate::glue::Radio_SSL_ID,
+        mcm: crate::glue::Radio_MultiConfigMessage,
+    ) -> Result<(), ()> {
         if let Some(base_station) = &mut self.get_base_station_mux() {
             if let Some(bs) = &mut **base_station {
                 match bs.serial.send_mcm(id as u8, mcm) {
@@ -298,7 +356,11 @@ impl Monitor {
     }
 
     // Send odometry override
-    pub fn send_over_odo(&self, id : u8, over_odo : crate::glue::Radio_OverrideOdometry) -> Result<(), ()> {
+    pub fn send_over_odo(
+        &self,
+        id: u8,
+        over_odo: crate::glue::Radio_OverrideOdometry,
+    ) -> Result<(), ()> {
         if let Some(base_station) = &mut self.get_base_station_mux() {
             if let Some(bs) = &mut **base_station {
                 match bs.serial.send_over_odo(id, over_odo) {
@@ -310,20 +372,21 @@ impl Monitor {
         Err(())
     }
 
-
     // Connect to a base station over a serial COM port
-    pub fn connect_to(&self, port: &str) -> Result<(),()> {
+    pub fn connect_to(&self, port: &str) -> Result<(), ()> {
         if let Some(base_station) = &mut self.get_base_station_mux() {
-            **base_station = BaseStation::new(port).ok();
-            if let Some(_) = & **base_station {
-                return Ok(())
+            **base_station = BaseStation::new(port)
+                .map_err(|e| eprintln!("Error connecting to {}: {:?}", port, e))
+                .ok();
+            if let Some(_) = &**base_station {
+                return Ok(());
             }
         }
         Err(())
     }
 
     // Connect to the first found basestation
-    pub fn connect_to_first(&self) -> Result<(),()> {
+    pub fn connect_to_first(&self) -> Result<(), ()> {
         let ports = Serial::list_ports(true);
         if ports.len() >= 1 {
             return self.connect_to(&ports[0]);
@@ -333,15 +396,15 @@ impl Monitor {
 
     pub fn is_connected(&self) -> bool {
         if let Some(base_station) = &mut self.get_base_station_mux() {
-            if let Some(_) = & **base_station {
-                return true
+            if let Some(_) = &**base_station {
+                return true;
             }
         }
         false
     }
 
     // Disconnect from connected base station (does nothing if not connected already)
-    pub fn disconnect(&self) -> Result<(),()> {
+    pub fn disconnect(&self) -> Result<(), ()> {
         if let Some(base_station) = &mut self.get_base_station_mux() {
             **base_station = None;
             return Ok(());
@@ -349,7 +412,6 @@ impl Monitor {
         Err(())
     }
 } // impl Monitor
-
 
 #[cfg(test)]
 mod basestation_tests {
@@ -391,18 +453,21 @@ mod basestation_tests {
         // match monitor.connect_to("COM50") {
         match monitor.connect_to_first() {
             Ok(_) => println!("Connected successfully"),
-            Err(_) => {println!("Conection failed"); return},
+            Err(_) => {
+                println!("Conection failed");
+                return;
+            }
         }
-        
+
         for i in 0..100 {
             std::thread::sleep(std::time::Duration::from_millis(20)); // Allow thread to get stuff done
             println!("i = {i}");
             // if i % 10 == 0 {
-                
+
             let mut commands = [None; MAX_NUM_ROBOTS];
-            
+
             // for j in 0..3 {
-            commands[i%10] = Some(crate::glue::Radio_Command {
+            commands[i % 10] = Some(crate::glue::Radio_Command {
                 speed: crate::glue::HG_Pose {
                     x: 0.0,
                     y: 0.0,
@@ -418,15 +483,13 @@ mod basestation_tests {
 
             // let _ = monitor.send(commands);
             // }
-            
-            
 
             // }
             if let Stamped::Have(timestamp, info) = monitor.get_base_info() {
                 println!("{:?} => {:?}", timestamp.elapsed(), info);
             }
             if let Some(robots) = monitor.get_robots() {
-                if let Some(timestamp,) = robots[4].time_since_status_lf_update() {
+                if let Some(timestamp) = robots[4].time_since_status_lf_update() {
                     println!("{:?} => status_lf", timestamp);
                 }
                 if let Some(timestamp) = robots[4].time_since_status_hf_update() {
@@ -441,5 +504,4 @@ mod basestation_tests {
 
         let _ = monitor.disconnect();
     }
-
 }
