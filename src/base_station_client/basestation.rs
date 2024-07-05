@@ -208,6 +208,7 @@ impl BaseStation {
 pub struct Monitor {
     base_station_mux: std::sync::Arc<std::sync::Mutex<Option<BaseStation>>>,
     debug_mux: std::sync::Arc<std::sync::Mutex<Debug>>,
+    stop_channel: std::sync::mpsc::Sender<()>,
 }
 
 impl Monitor {
@@ -260,9 +261,13 @@ impl Monitor {
 
         let mux_clone = std::sync::Arc::clone(&base_station_mux);
         let debug_mux_clone = std::sync::Arc::clone(&debug_mux);
+        let (stop_channel, stop_receiver) = std::sync::mpsc::channel();
         let _thread_join_handle = std::thread::spawn(move || {
             loop {
                 {
+                    if stop_receiver.try_recv().is_ok() {
+                        break;
+                    }
                     // monitor mutex
                     // let start_time = std::time::Instant::now();
                     let mut disconnect: bool = false;
@@ -286,7 +291,13 @@ impl Monitor {
         Monitor {
             base_station_mux,
             debug_mux,
+            stop_channel,
         }
+    }
+
+    /// Stop the monitor thread
+    pub fn stop(self) {
+        let _ = self.stop_channel.send(());
     }
 
     // Get base station info
