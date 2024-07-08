@@ -99,7 +99,12 @@ impl Robot {
 
     // Returns an Option containing the kicker board temperature in degrees Celsius
     pub fn kicker_temperature(&self) -> Option<f32> {
-        self.status_lf.have(|status_lf| {status_lf.kicker_temp as f32 * glue::HG_KICKER_SCALE_TEMP})
+        None // Has been deprecated by new hardware design
+    }
+
+    // Returns an Option containing the power board status
+    pub fn power_board_status(&self) -> Option<glue::HG_Status> {
+        self.status_lf.have(|status_lf| {status_lf.power_board_status})
     }
 
     // Returns an Option of an array of all 5 motor statuses
