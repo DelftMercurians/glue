@@ -63,11 +63,35 @@ impl Serial {
         }
     }
 
+    #[cfg(target_os = "windows")]
     pub fn list_ports(filter : bool) -> Vec<String> {
         let ports = serialport::available_ports().expect("No ports found!");
         ports.into_iter().filter(|p| !filter || Self::is_basestation(&p)).map(|p| p.port_name).collect()
     }
 
+    #[cfg(target_os = "linux")]
+    pub fn list_ports(filter : bool) -> Vec<String> {
+        let ports = serialport::available_ports().expect("No ports found!");
+        let mut a : Vec<String>= ports.into_iter().filter(|p| !filter || Self::is_basestation(&p)).map(|p| p.port_name).collect();
+        if !filter {
+            let mut b : Vec<String> = std::fs::read_dir("/dev/pts").unwrap().into_iter().map(|path| path.unwrap().path().display().to_string()).collect();
+            a.append(&mut b);
+        }
+        a.sort();
+        a
+    }
+
+    #[cfg(target_os = "linux")]
+    pub fn list_unknown_ports() -> Vec<String> {
+        let ports = serialport::available_ports().expect("No ports found!");
+        let mut a : Vec<String>= ports.into_iter().filter(|p| Self::is_virtual(&p)).map(|p| p.port_name).collect();
+        let mut b : Vec<String> = std::fs::read_dir("/dev/pts").unwrap().into_iter().map(|path| path.unwrap().path().display().to_string()).collect();
+        a.append(&mut b);
+        a.sort();
+        a
+    }
+
+    #[cfg(target_os = "windows")]
     pub fn list_unknown_ports() -> Vec<String> {
         let ports = serialport::available_ports().expect("No ports found!");
         ports.into_iter().filter(|p| Self::is_virtual(&p)).map(|p| p.port_name).collect()
@@ -130,11 +154,9 @@ impl Serial {
         match self.port.read(&mut self.serial_buf[self.glob_index..]) {
             Ok(length) => {
                 // Transmit everything on the mirror port
-                if let Some(mirror) = &mut self.mirror {
-                    if let Ok(b) = mirror.read_carrier_detect() {
-                        if b {
-                            let _ = mirror.write(&self.serial_buf[self.glob_index..self.glob_index+length]);
-                        }
+                if self.check_carrier_detect() {
+                    if let Some(mirror) = &mut self.mirror {
+                        let _ = mirror.write(&self.serial_buf[self.glob_index..self.glob_index+length]);
                     }
                 }
                 self.glob_index += length;
@@ -147,6 +169,23 @@ impl Serial {
             Err(e) => eprintln!("{:?}", e),
         }
         return Err(())
+    }
+
+    #[cfg(target_os = "linux")]
+    fn check_carrier_detect(&mut self) -> bool {
+        true
+    }
+
+    #[cfg(target_os = "windows")]
+    fn check_carrier_detect(&mut self) -> bool {
+        if let Some(mirror) = &mut self.mirror {
+            if let Ok(b) = mirror.read_carrier_detect() {
+                if b {
+                    return true;
+                }
+            }
+        }
+        false
     }
 
     pub fn read_packet(&mut self) -> Option<Vec<u8>> {
