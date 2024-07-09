@@ -350,6 +350,22 @@ impl Monitor {
         Err(())
     }
 
+    // Send command to all robots
+    pub fn send_broadcast(
+        &self,
+        command : crate::glue::Radio_Command,
+    ) -> Result<(), ()> {
+        if let Some(base_station) = &mut self.get_base_station_mux() {
+            if let Some(bs) = &mut **base_station {
+                match bs.serial.send_command(Radio_Broadcast_ID, command) {
+                    Ok(_) => return Ok(()),
+                    Err(_) => return Err(()),
+                }
+            }
+        }
+        Err(())
+    }
+
     pub fn send_mcm(
         &self,
         id: crate::glue::Radio_SSL_ID,
