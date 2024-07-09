@@ -8,6 +8,7 @@ const SERIAL_BUF_LEN: usize = 100000;
 #[derive(Debug)]
 pub struct Serial {
     port : Box<dyn SerialPort>,
+    mirror : Option<Box<dyn SerialPort>>,
     serial_buf: Vec<u8>,
     glob_index: usize,
 }
@@ -18,9 +19,30 @@ impl Serial {
             port: serialport::new(port_name, 115200)
                             .timeout(Duration::from_millis(10))
                             .open()?,
+            mirror: None,
             serial_buf: vec![0; SERIAL_BUF_LEN],
             glob_index: 0,
-        })
+        }.set_dtr())
+    }
+
+    fn set_dtr(mut self) -> Self {
+        let _ = self.port.write_data_terminal_ready(true);
+        self
+    }
+
+    pub fn open_mirror(&mut self, port_name : &str) -> Result<(), serialport::Error> {
+        self.mirror = Some(serialport::new(port_name, 115200)
+                            .timeout(Duration::from_millis(10))
+                            .open()?);
+        Ok(())
+    }
+
+    pub fn close_mirror(&mut self) {
+        self.mirror = None;
+    }
+
+    pub fn is_mirror_connected(&self) -> bool {
+        self.mirror.is_some()
     }
 
     fn is_basestation(port : &serialport::SerialPortInfo) -> bool {
@@ -117,6 +139,11 @@ impl Serial {
     }
 
     fn read(&mut self) -> Result<(), ()> {
+        // Drop everything coming in on the mirror port
+        if let Some(mirror) = &mut self.mirror {
+            let mut drop_buff = [0; 256];
+            let _ = mirror.read(&mut drop_buff);
+        }
         match self.port.bytes_to_read() {
             Ok(0) => return Ok(()),
             Ok(_) => (),
@@ -124,6 +151,14 @@ impl Serial {
         }
         match self.port.read(&mut self.serial_buf[self.glob_index..]) {
             Ok(length) => {
+                // Transmit everything on the mirror port
+                if let Some(mirror) = &mut self.mirror {
+                    if let Ok(b) = mirror.read_carrier_detect() {
+                        if b {
+                            let _ = mirror.write(&self.serial_buf[self.glob_index..self.glob_index+length]);
+                        }
+                    }
+                }
                 self.glob_index += length;
                 if self.glob_index == SERIAL_BUF_LEN {
                     panic!("Buffer is full");   // TODO figure out what to do here

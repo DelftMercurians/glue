@@ -412,6 +412,24 @@ impl Monitor {
         Err(())
     }
 
+    pub fn connect_to_mirror(&self, port: &str) -> Result<(), ()> {
+        if let Some(base_station) = &mut self.get_base_station_mux() {
+            if let Some(bs) = &mut **base_station {
+                bs.serial.open_mirror(port).map_err(|e| eprintln!("Error connecting to mirror {}: {:?}", port, e))?;
+                return Ok(());
+            }
+        }
+        Err(())
+    }
+
+    pub fn disconnect_mirror(&self) {
+        if let Some(base_station) = &mut self.get_base_station_mux() {
+            if let Some(bs) = &mut **base_station {
+                bs.serial.close_mirror();
+            }
+        }
+    }
+
     // Connect to the first found basestation
     pub fn connect_to_first(&self) -> Result<(), ()> {
         let ports = Serial::list_ports(true);
@@ -425,6 +443,15 @@ impl Monitor {
         if let Some(base_station) = &mut self.get_base_station_mux() {
             if let Some(_) = &**base_station {
                 return true;
+            }
+        }
+        false
+    }
+
+    pub fn is_connected_to_mirror(&self) -> bool {
+        if let Some(base_station) = &self.get_base_station_mux() {
+            if let Some(bs) = &**base_station {
+                return bs.serial.is_mirror_connected();
             }
         }
         false
