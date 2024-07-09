@@ -54,45 +54,23 @@ impl Serial {
         }
     }
 
+    fn is_virtual(port : &serialport::SerialPortInfo) -> bool {
+        match &port.port_type {
+            serialport::SerialPortType::Unknown => {
+                true
+            },
+            _ => false
+        }
+    }
+
     pub fn list_ports(filter : bool) -> Vec<String> {
         let ports = serialport::available_ports().expect("No ports found!");
-        // for p in &ports {
-        //     println!("  {}", p.port_name);
-        //     match &p.port_type {
-        //         SerialPortType::UsbPort(info) => {
-        //             println!("    Type: USB");
-        //             println!("    VID:{:04x} PID:{:04x}", info.vid, info.pid);
-        //             println!("     Serial Number: {}",
-        //                 info.serial_number.as_ref().map_or("", String::as_str)
-        //             );
-        //             println!(
-        //                 "      Manufacturer: {}",
-        //                 info.manufacturer.as_ref().map_or("", String::as_str)
-        //             );
-        //             println!(
-        //                 "           Product: {}",
-        //                 info.product.as_ref().map_or("", String::as_str)
-        //             );
-        //             #[cfg(feature = "usbportinfo-interface")]
-        //             println!(
-        //                 "         Interface: {}",
-        //                 info.interface
-        //                     .as_ref()
-        //                     .map_or("".to_string(), |x| format!("{:02x}", *x))
-        //             );
-        //         }
-        //         SerialPortType::BluetoothPort => {
-        //             println!("    Type: Bluetooth");
-        //         }
-        //         SerialPortType::PciPort => {
-        //             println!("    Type: PCI");
-        //         }
-        //         SerialPortType::Unknown => {
-        //             println!("    Type: Unknown");
-        //         }
-        //     }
-        // }
         ports.into_iter().filter(|p| !filter || Self::is_basestation(&p)).map(|p| p.port_name).collect()
+    }
+
+    pub fn list_unknown_ports() -> Vec<String> {
+        let ports = serialport::available_ports().expect("No ports found!");
+        ports.into_iter().filter(|p| Self::is_virtual(&p)).map(|p| p.port_name).collect()
     }
 
     pub fn send(&mut self, line : &str) {
