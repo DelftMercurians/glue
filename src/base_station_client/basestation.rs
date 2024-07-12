@@ -222,6 +222,12 @@ pub struct Monitor {
 
     base_station_info_channel: ring_channel::RingReceiver<Stamped<Base_Information>>,
     most_recent_base_station_info: Stamped<Base_Information>,
+
+    // con_rq: ring_channel::RingSender<String>,
+    // con_rq_ack: ring_channel::RingReceiver<String>,
+
+    bs_connected: ring_channel::RingReceiver<bool>,
+    most_recent_bs_connected: bool,
 }
 
 impl Monitor {
@@ -244,19 +250,20 @@ impl Monitor {
 
     // Get a mutex on the debug strct
     pub fn get_debug_mux(&self) -> Option<std::sync::MutexGuard<'_, Debug>> {
-        let time_start = std::time::Instant::now();
-        loop {
-            match self.debug_mux.try_lock() {
-                Ok(monitor_mut) => {
-                    return Some(monitor_mut);
-                }
-                Err(_) => {
-                    if time_start.elapsed() > std::time::Duration::from_millis(40) {
-                        return None;
-                    }
-                }
-            }
-        }
+        // let time_start = std::time::Instant::now();
+        // loop {
+        //     match self.debug_mux.try_lock() {
+        //         Ok(monitor_mut) => {
+        //             return Some(monitor_mut);
+        //         }
+        //         Err(_) => {
+        //             if time_start.elapsed() > std::time::Duration::from_millis(40) {
+        //                 return None;
+        //             }
+        //         }
+        //     }
+        // }
+        None
     }
 
     // Start the background monitoring thread
@@ -279,7 +286,11 @@ impl Monitor {
         
         let (robot_status_sender, robot_status_channel) = ring_channel::ring_channel(NonZeroUsize::new(1).unwrap());
         let (base_station_info_sender, base_station_info_channel) = ring_channel::ring_channel(NonZeroUsize::new(1).unwrap());
+            
+        let (bs_connected_sender, bs_connected) = ring_channel::ring_channel(NonZeroUsize::new(1).unwrap());
         
+        // let (con_rq, con_rq_rec) = ring_channel::ring_channel(NonZeroUsize::new(1).unwrap());
+        // let (con_rq_ack_send, con_rq_ack) = ring_channel::ring_channel(NonZeroUsize::new(1).unwrap());
         
         let _thread_join_handle = std::thread::spawn(move || {
             loop {
@@ -293,37 +304,41 @@ impl Monitor {
                     let mut monitor_mut = mux_clone.lock().unwrap();
                     let mut debug_mut = debug_mux_clone.lock().unwrap();
                     if let Some(base_station) = &mut *monitor_mut {
+                        let _ = bs_connected_sender.send(true);
                         let debug = &mut *debug_mut;
                         match base_station.read_and_parse(Some(debug)) {
                             Ok((update_robots, update_base_info)) => {
                                 if update_robots {
-                                    robot_status_sender.send(base_station.robots);
+                                    let _ = robot_status_sender.send(base_station.robots);
                                 }
                                 if update_base_info {
-                                    base_station_info_sender.send(base_station.base_info);
+                                    let _ = base_station_info_sender.send(base_station.base_info);
                                 }
                             },
                             Err(_) => disconnect = true,
-                        };   
-                    }
-                    if let Some(base_station) = &mut *monitor_mut {
-                        match command_receiver.try_recv() {
-                            Ok((id, command)) => {
-                                match base_station.serial.send_command(id,command) {
-                                    Ok(_) => (),
-                                    Err(_) => println!("Error transmitting command"),
+                        };
+                        for _ in 0..2 { // Limit how often this can run
+                            match command_receiver.try_recv() {
+                                Ok((id, command)) => {
+                                    match base_station.serial.send_command(id,command) {
+                                        Ok(_) => (),
+                                        Err(_) => println!("Error transmitting command"),
+                                    }
                                 }
+                                Err(std::sync::mpsc::TryRecvError::Disconnected) => { break; }
+                                Err(std::sync::mpsc::TryRecvError::Empty) => { break; }
                             }
-                            Err(std::sync::mpsc::TryRecvError::Disconnected) => {  }
-                            Err(std::sync::mpsc::TryRecvError::Empty) => { }
                         }
+                        std::thread::sleep(std::time::Duration::from_secs(1) / 10000000); // Give other threads an opportunity to access the mutex
+                    } else {
+                        let _ = bs_connected_sender.send(false);
                     }
                     if disconnect {
                         *monitor_mut = None;
                     }
                     // println!("time = {:?}", start_time.elapsed());
+                    
                 } // monitor mutex
-                std::thread::sleep(std::time::Duration::from_secs(1) / 60); // Give other threads an opportunity to access the mutex
             }
         });
         Monitor {
@@ -335,6 +350,10 @@ impl Monitor {
             most_recent_robot_status: [Robot::default(); MAX_NUM_ROBOTS],
             base_station_info_channel,
             most_recent_base_station_info: Stamped::NothingYet,
+            bs_connected,
+            most_recent_bs_connected: false,
+            // con_rq,
+            // con_rq_ack,
         }
     }
 
@@ -353,11 +372,11 @@ impl Monitor {
 
     // Get base station connection duration
     pub fn base_connection_duration(&self) -> Option<std::time::Duration> {
-        if let Some(base_station) = &mut self.get_base_station_mux() {
-            if let Some(bs) = &(**base_station) {
-                return Some(bs.connection_time());
-            }
-        }
+        // if let Some(base_station) = &mut self.get_base_station_mux() {
+        //     if let Some(bs) = &(**base_station) {
+        //         return Some(bs.connection_time());
+        //     }
+        // }
         None
     }
 
@@ -474,21 +493,22 @@ impl Monitor {
         Err(())
     }
 
-    pub fn is_connected(&self) -> bool {
-        if let Some(base_station) = &mut self.get_base_station_mux() {
-            if let Some(_) = &**base_station {
-                return true;
+    pub fn is_connected(&mut self) -> bool {
+        match self.bs_connected.try_recv() {
+            Ok(val) => {
+                self.most_recent_bs_connected = val;
             }
+            Err(_) => ()
         }
-        false
+        self.most_recent_bs_connected
     }
 
     pub fn is_connected_to_mirror(&self) -> bool {
-        if let Some(base_station) = &self.get_base_station_mux() {
-            if let Some(bs) = &**base_station {
-                return bs.serial.is_mirror_connected();
-            }
-        }
+        // if let Some(base_station) = &self.get_base_station_mux() {
+        //     if let Some(bs) = &**base_station {
+        //         return bs.serial.is_mirror_connected();
+        //     }
+        // }
         false
     }
 
@@ -563,7 +583,7 @@ mod basestation_tests {
                     z: 0.0,
                 },
                 dribbler_speed: 2.0,
-                kicker_command: Radio_KickerCommand::NONE,
+                robot_command: Radio_RobotCommand::NONE,
                 _pad: [0, 0, 0],
                 kick_time: 1.0,
                 fan_speed: 2.0,

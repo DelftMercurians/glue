@@ -25,7 +25,7 @@ impl ParseCallbacks for MacroCallback {
                 ],
             "HG_Pose" | "CAN_VARIABLE" | "Radio_ConfigMessage" | "Radio_Command" | "Radio_Reply" |
             "Radio_PrimaryStatusHF" | "Radio_PrimaryStatusLF" |
-            "Radio_ImuReadings" | "MessageType" | "Radio_Message" | "Radio_KickerCommand" |
+            "Radio_ImuReadings" | "MessageType" | "Radio_Message" | "Radio_RobotCommand" |
             "Radio_Message__bindgen_ty_1" | "Radio_Message__bindgen_ty_1__bindgen_ty_1" | "Radio_Message__bindgen_ty_1__bindgen_ty_2" |
             "Radio_MultiConfigMessage" | "HG_ConfigOperation" | "HG_VariableType" |
             "Radio_OdometryReading" | "Radio_OverrideOdometry" |
@@ -75,7 +75,7 @@ fn main() {
         .rustified_enum("Radio::PrimaryStatusHF")
         .rustified_enum("Radio::PrimaryStatusLF")
         .rustified_enum("Radio::MessageType")
-        .rustified_enum("Radio::KickerCommand")
+        .rustified_enum("Radio::RobotCommand")
         .rustified_enum("HG::ConfigOperation")
         .rustified_enum("HG::VariableType")
         .rustified_enum("HG::Variable")
