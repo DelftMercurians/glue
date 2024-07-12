@@ -143,8 +143,14 @@ impl Serial {
     fn read(&mut self) -> Result<(), ()> {
         // Drop everything coming in on the mirror port
         if let Some(mirror) = &mut self.mirror {
-            let mut drop_buff = [0; 256];
-            let _ = mirror.read(&mut drop_buff);
+            match mirror.bytes_to_read() {
+                Ok(0) => (),
+                Ok(_) => {
+                    let mut drop_buff = [0; 256];
+                    let _ = mirror.read(&mut drop_buff);
+                },
+                Err(_) => (),
+            }
         }
         match self.port.bytes_to_read() {
             Ok(0) => return Ok(()),
@@ -156,7 +162,9 @@ impl Serial {
                 // Transmit everything on the mirror port
                 if self.check_carrier_detect() {
                     if let Some(mirror) = &mut self.mirror {
-                        let _ = mirror.write(&self.serial_buf[self.glob_index..self.glob_index+length]);
+                        let mut buffer_copy: Vec<u8> = vec![0; length];
+                        buffer_copy.copy_from_slice(&self.serial_buf[self.glob_index..self.glob_index+length]);
+                        let _ = mirror.write(&buffer_copy);
                     }
                 }
                 self.glob_index += length;
@@ -171,22 +179,22 @@ impl Serial {
         return Err(())
     }
 
-    #[cfg(target_os = "windows")]
+    #[cfg(target_os = "linux")]
     fn check_carrier_detect(&mut self) -> bool {
         true
     }
 
-    // #[cfg(target_os = "windows")]
-    // fn check_carrier_detect(&mut self) -> bool {
-    //     if let Some(mirror) = &mut self.mirror {
-    //         if let Ok(b) = mirror.read_carrier_detect() {
-    //             if b {
-    //                 return true;
-    //             }
-    //         }
-    //     }
-    //     false
-    // }
+    #[cfg(target_os = "windows")]
+    fn check_carrier_detect(&mut self) -> bool {
+        if let Some(mirror) = &mut self.mirror {
+            if let Ok(b) = mirror.read_carrier_detect() {
+                if b {
+                    return true;
+                }
+            }
+        }
+        false
+    }
 
     pub fn read_packet(&mut self) -> Option<Vec<u8>> {
         self.read().ok()?;
