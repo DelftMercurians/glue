@@ -3,6 +3,8 @@ use super::serial::*;
 use super::utils::Stamped;
 use crate::glue::*;
 
+use std::num::NonZeroUsize;
+
 pub const MAX_NUM_ROBOTS: usize = 16;
 
 const DEBUG_SCROLLBACK_LIMIT: usize = 500;
@@ -47,9 +49,10 @@ impl BaseStation {
         self.start_time.elapsed()
     }
 
-    pub fn read_and_parse(&mut self, debug: Option<&mut Debug>) -> Result<bool, ()> {
+    pub fn read_and_parse(&mut self, debug: Option<&mut Debug>) -> Result<(bool, bool), ()> {
         // Parse contents of serial buffer
-        let mut b = false;
+        let mut update_robots = false;
+        let mut update_base_info = false;
         loop {
             if let Some(data) = self.serial.read_packet() {
                 const LEN_BASE_INFORMATION: usize =
@@ -60,6 +63,7 @@ impl BaseStation {
                     LEN_BASE_INFORMATION => {
                         if let Some(base_info) = Base_Information::from_bytes(data) {
                             self.base_info.update(base_info);
+                            update_base_info = true;
                             if let Some(&mut ref mut dbg) = debug {
                                 (*dbg).incoming_lines.push_front((
                                     chrono::Local::now(),
@@ -76,10 +80,10 @@ impl BaseStation {
                             if msg.id as usize >= MAX_NUM_ROBOTS {
                                 continue;
                             } // Invalid robot id, continue to next frame
-                            b = true;
                             match Radio_Message_Rust::unwrap(msg.msg) {
                                 Radio_Message_Rust::PrimaryStatusHF(status_hf) => {
                                     self.robots[msg.id as usize].update_status_hf(status_hf);
+                                    update_robots = true;
                                     if let Some(&mut ref mut dbg) = debug {
                                         (*dbg).incoming_lines.push_front((
                                             chrono::Local::now(),
@@ -92,6 +96,7 @@ impl BaseStation {
                                 }
                                 Radio_Message_Rust::PrimaryStatusLF(status_lf) => {
                                     self.robots[msg.id as usize].update_status_lf(status_lf);
+                                    update_robots = true;
                                     if let Some(&mut ref mut dbg) = debug {
                                         (*dbg).incoming_lines.push_front((
                                             chrono::Local::now(),
@@ -104,6 +109,7 @@ impl BaseStation {
                                 }
                                 Radio_Message_Rust::ImuReadings(imu_reading) => {
                                     self.robots[msg.id as usize].update_imu_reading(imu_reading);
+                                    update_robots = true;
                                     if let Some(&mut ref mut dbg) = debug {
                                         (*dbg).incoming_lines.push_front((
                                             chrono::Local::now(),
@@ -201,7 +207,7 @@ impl BaseStation {
                 break;
             }
         }
-        Ok(b)
+        Ok((update_robots, update_base_info))
     }
 } // impl Monitor
 
@@ -209,6 +215,13 @@ pub struct Monitor {
     base_station_mux: std::sync::Arc<std::sync::Mutex<Option<BaseStation>>>,
     debug_mux: std::sync::Arc<std::sync::Mutex<Debug>>,
     stop_channel: std::sync::mpsc::Sender<()>,
+    send_command_channel: std::sync::mpsc::Sender<(Radio_SSL_ID, Radio_Command)>,
+
+    robot_status_channel: ring_channel::RingReceiver<[Robot; MAX_NUM_ROBOTS]>,
+    most_recent_robot_status: [Robot; MAX_NUM_ROBOTS],
+
+    base_station_info_channel: ring_channel::RingReceiver<Stamped<Base_Information>>,
+    most_recent_base_station_info: Stamped<Base_Information>,
 }
 
 impl Monitor {
@@ -262,6 +275,12 @@ impl Monitor {
         let mux_clone = std::sync::Arc::clone(&base_station_mux);
         let debug_mux_clone = std::sync::Arc::clone(&debug_mux);
         let (stop_channel, stop_receiver) = std::sync::mpsc::channel();
+        let (send_command_channel, command_receiver) = std::sync::mpsc::channel();
+        
+        let (robot_status_sender, robot_status_channel) = ring_channel::ring_channel(NonZeroUsize::new(1).unwrap());
+        let (base_station_info_sender, base_station_info_channel) = ring_channel::ring_channel(NonZeroUsize::new(1).unwrap());
+        
+        
         let _thread_join_handle = std::thread::spawn(move || {
             loop {
                 {
@@ -276,9 +295,28 @@ impl Monitor {
                     if let Some(base_station) = &mut *monitor_mut {
                         let debug = &mut *debug_mut;
                         match base_station.read_and_parse(Some(debug)) {
-                            Ok(_) => (),
+                            Ok((update_robots, update_base_info)) => {
+                                if update_robots {
+                                    robot_status_sender.send(base_station.robots);
+                                }
+                                if update_base_info {
+                                    base_station_info_sender.send(base_station.base_info);
+                                }
+                            },
                             Err(_) => disconnect = true,
-                        };
+                        };   
+                    }
+                    if let Some(base_station) = &mut *monitor_mut {
+                        match command_receiver.try_recv() {
+                            Ok((id, command)) => {
+                                match base_station.serial.send_command(id,command) {
+                                    Ok(_) => (),
+                                    Err(_) => println!("Error transmitting command"),
+                                }
+                            }
+                            Err(std::sync::mpsc::TryRecvError::Disconnected) => {  }
+                            Err(std::sync::mpsc::TryRecvError::Empty) => { }
+                        }
                     }
                     if disconnect {
                         *monitor_mut = None;
@@ -292,6 +330,11 @@ impl Monitor {
             base_station_mux,
             debug_mux,
             stop_channel,
+            send_command_channel,
+            robot_status_channel,
+            most_recent_robot_status: [Robot::default(); MAX_NUM_ROBOTS],
+            base_station_info_channel,
+            most_recent_base_station_info: Stamped::NothingYet,
         }
     }
 
@@ -301,13 +344,11 @@ impl Monitor {
     }
 
     // Get base station info
-    pub fn get_base_info(&self) -> Stamped<Base_Information> {
-        if let Some(base_station) = &mut self.get_base_station_mux() {
-            if let Some(bs) = &(**base_station) {
-                return bs.base_info.clone();
-            }
+    pub fn get_base_info(&mut self) -> Stamped<Base_Information> {
+        if let Ok(fresh_base_info) = self.base_station_info_channel.try_recv() {
+            self.most_recent_base_station_info = fresh_base_info;
         }
-        Stamped::NothingYet
+        self.most_recent_base_station_info
     }
 
     // Get base station connection duration
@@ -321,13 +362,11 @@ impl Monitor {
     }
 
     // Get robots, read only
-    pub fn get_robots(&self) -> Option<[Robot; MAX_NUM_ROBOTS]> {
-        if let Some(base_station) = &mut self.get_base_station_mux() {
-            if let Some(bs) = &(**base_station) {
-                return Some(bs.robots.clone());
-            }
+    pub fn get_robots(&mut self) -> Option<[Robot; MAX_NUM_ROBOTS]> {
+        if let Ok(robots) = self.robot_status_channel.try_recv() {
+            self.most_recent_robot_status = robots;
         }
-        None
+        Some(self.most_recent_robot_status)
     }
 
     // Send command to robot
@@ -335,19 +374,22 @@ impl Monitor {
         &self,
         commands: [Option<crate::glue::Radio_Command>; MAX_NUM_ROBOTS],
     ) -> Result<(), ()> {
-        if let Some(base_station) = &mut self.get_base_station_mux() {
-            if let Some(bs) = &mut **base_station {
-                for i in 0..MAX_NUM_ROBOTS {
-                    if let Some(command) = commands[i] {
-                        match bs.serial.send_command(i as u8, command) {
-                            Ok(_) => (),
-                            Err(_) => return Err(()),
-                        }
-                    }
-                }
+        for i in 0..MAX_NUM_ROBOTS {
+            if let Some(command) = commands[i] {
+                self.send_single(i as u8, command)?;
             }
         }
-        Err(())
+        Ok(())
+    }
+
+    // Send command to single robot
+    pub fn send_single(
+        &self,
+        id: crate::glue::Radio_SSL_ID,
+        command: crate::glue::Radio_Command,
+    ) -> Result<(), ()> {
+        self.send_command_channel.send((id, command)).map_err(|_| ())?;
+        Ok(())
     }
 
     // Send command to all robots
@@ -355,15 +397,8 @@ impl Monitor {
         &self,
         command : crate::glue::Radio_Command,
     ) -> Result<(), ()> {
-        if let Some(base_station) = &mut self.get_base_station_mux() {
-            if let Some(bs) = &mut **base_station {
-                match bs.serial.send_command(Radio_Broadcast_ID, command) {
-                    Ok(_) => return Ok(()),
-                    Err(_) => return Err(()),
-                }
-            }
-        }
-        Err(())
+        self.send_command_channel.send((Radio_Broadcast_ID, command)).map_err(|_| ())?;
+        Ok(())
     }
 
     pub fn send_mcm(
@@ -503,7 +538,7 @@ mod basestation_tests {
         println!("Trying to connect");
         std::thread::sleep(std::time::Duration::from_millis(100));
 
-        let monitor = Monitor::start();
+        let mut monitor = Monitor::start();
         // match monitor.connect_to("COM50") {
         match monitor.connect_to_first() {
             Ok(_) => println!("Connected successfully"),

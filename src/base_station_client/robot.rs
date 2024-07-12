@@ -1,7 +1,7 @@
 use crate::glue::{self, Radio_ImuReadings};
 
 use super::utils::Stamped;
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Copy)]
 pub struct Robot {
     status_hf: Stamped<crate::glue::Radio_PrimaryStatusHF>,
     status_lf: Stamped<crate::glue::Radio_PrimaryStatusLF>,

@@ -171,22 +171,22 @@ impl Serial {
         return Err(())
     }
 
-    #[cfg(target_os = "linux")]
+    #[cfg(target_os = "windows")]
     fn check_carrier_detect(&mut self) -> bool {
         true
     }
 
-    #[cfg(target_os = "windows")]
-    fn check_carrier_detect(&mut self) -> bool {
-        if let Some(mirror) = &mut self.mirror {
-            if let Ok(b) = mirror.read_carrier_detect() {
-                if b {
-                    return true;
-                }
-            }
-        }
-        false
-    }
+    // #[cfg(target_os = "windows")]
+    // fn check_carrier_detect(&mut self) -> bool {
+    //     if let Some(mirror) = &mut self.mirror {
+    //         if let Ok(b) = mirror.read_carrier_detect() {
+    //             if b {
+    //                 return true;
+    //             }
+    //         }
+    //     }
+    //     false
+    // }
 
     pub fn read_packet(&mut self) -> Option<Vec<u8>> {
         self.read().ok()?;
