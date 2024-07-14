@@ -28,7 +28,7 @@ impl ParseCallbacks for MacroCallback {
             "Radio_ImuReadings" | "MessageType" | "Radio_Message" | "Radio_RobotCommand" |
             "Radio_Message__bindgen_ty_1" | "Radio_Message__bindgen_ty_1__bindgen_ty_1" | "Radio_Message__bindgen_ty_1__bindgen_ty_2" |
             "Radio_MultiConfigMessage" | "HG_ConfigOperation" | "HG_VariableType" |
-            "Radio_OdometryReading" | "Radio_OverrideOdometry" |
+            "Radio_OdometryReading" | "Radio_OverrideOdometry" | "Radio_Access" | 
             "Radio_MessageWrapper" =>
                 vec![
                     "AsBytes".into(),
@@ -79,6 +79,7 @@ fn main() {
         .rustified_enum("HG::ConfigOperation")
         .rustified_enum("HG::VariableType")
         .rustified_enum("HG::Variable")
+        .rustified_enum("Radio::Access")
         .clang_arg("--target=arm-none-eabi")
         .clang_arg("-DUSING_BINDGEN")
         .blocklist_file("^(.*can_id\\.h$)$")

@@ -216,6 +216,7 @@ pub struct Monitor {
     debug_mux: std::sync::Arc<std::sync::Mutex<Debug>>,
     stop_channel: std::sync::mpsc::Sender<()>,
     send_command_channel: std::sync::mpsc::Sender<(Radio_SSL_ID, Radio_Command)>,
+    send_message_channel: std::sync::mpsc::Sender<(Radio_SSL_ID, Radio_Message_Rust)>,
 
     robot_status_channel: ring_channel::RingReceiver<[Robot; MAX_NUM_ROBOTS]>,
     most_recent_robot_status: [Robot; MAX_NUM_ROBOTS],
@@ -250,20 +251,19 @@ impl Monitor {
 
     // Get a mutex on the debug strct
     pub fn get_debug_mux(&self) -> Option<std::sync::MutexGuard<'_, Debug>> {
-        // let time_start = std::time::Instant::now();
-        // loop {
-        //     match self.debug_mux.try_lock() {
-        //         Ok(monitor_mut) => {
-        //             return Some(monitor_mut);
-        //         }
-        //         Err(_) => {
-        //             if time_start.elapsed() > std::time::Duration::from_millis(40) {
-        //                 return None;
-        //             }
-        //         }
-        //     }
-        // }
-        None
+        let time_start = std::time::Instant::now();
+        loop {
+            match self.debug_mux.try_lock() {
+                Ok(monitor_mut) => {
+                    return Some(monitor_mut);
+                }
+                Err(_) => {
+                    if time_start.elapsed() > std::time::Duration::from_millis(40) {
+                        return None;
+                    }
+                }
+            }
+        }
     }
 
     // Start the background monitoring thread
@@ -283,6 +283,7 @@ impl Monitor {
         let debug_mux_clone = std::sync::Arc::clone(&debug_mux);
         let (stop_channel, stop_receiver) = std::sync::mpsc::channel();
         let (send_command_channel, command_receiver) = std::sync::mpsc::channel();
+        let (send_message_channel, message_receiver) = std::sync::mpsc::channel();
         
         let (robot_status_sender, robot_status_channel) = ring_channel::ring_channel(NonZeroUsize::new(1).unwrap());
         let (base_station_info_sender, base_station_info_channel) = ring_channel::ring_channel(NonZeroUsize::new(1).unwrap());
@@ -329,7 +330,19 @@ impl Monitor {
                                 Err(std::sync::mpsc::TryRecvError::Empty) => { break; }
                             }
                         }
-                        std::thread::sleep(std::time::Duration::from_secs(1) / 10000000); // Give other threads an opportunity to access the mutex
+                        match message_receiver.try_recv() {
+                            Ok((id, msg)) => {
+                                match base_station.serial.send_message(id,msg) {
+                                    Ok(_) => (),
+                                    Err(_) => println!("Error transmitting message"),
+                                }
+                            }
+                            Err(std::sync::mpsc::TryRecvError::Disconnected) => (),
+                            Err(std::sync::mpsc::TryRecvError::Empty) => (),
+                        }
+                        let time_start = std::time::Instant::now();
+                        while time_start.elapsed() < std::time::Duration::from_millis(10) {  }  // Blocking sleep alternative
+                        // std::thread::sleep(std::time::Duration::from_micros(1)); // Give other threads an opportunity to access the mutex
                     } else {
                         let _ = bs_connected_sender.send(false);
                     }
@@ -346,6 +359,7 @@ impl Monitor {
             debug_mux,
             stop_channel,
             send_command_channel,
+            send_message_channel,
             robot_status_channel,
             most_recent_robot_status: [Robot::default(); MAX_NUM_ROBOTS],
             base_station_info_channel,
@@ -425,15 +439,23 @@ impl Monitor {
         id: crate::glue::Radio_SSL_ID,
         mcm: crate::glue::Radio_MultiConfigMessage,
     ) -> Result<(), ()> {
-        if let Some(base_station) = &mut self.get_base_station_mux() {
-            if let Some(bs) = &mut **base_station {
-                match bs.serial.send_mcm(id as u8, mcm) {
-                    Ok(_) => (),
-                    Err(_) => return Err(()),
-                }
-            }
-        }
-        Err(())
+        self.send_message_channel.send((id, Radio_Message_Rust::MultiConfigMessage(mcm))).map_err(|_| ())?;
+        Ok(())
+    }
+
+    pub fn set_channel(
+        &self,
+        id: crate::glue::Radio_SSL_ID,
+        chan : u8,
+    ) -> Result<(), ()> {
+        let mcm = crate::glue::Radio_MultiConfigMessage{
+            operation: crate::glue::HG_ConfigOperation::NONE,
+            vars: [HG_Variable::RADIO_CHANNEL, HG_Variable::NONE, HG_Variable::NONE, HG_Variable::NONE, HG_Variable::NONE],
+            type_: HG_VariableType::U8,
+            _pad: 0,
+            values: [chan as u32, 0, 0, 0, 0],
+        };
+        self.send_mcm(id, mcm)
     }
 
     // Send odometry override
@@ -442,15 +464,8 @@ impl Monitor {
         id: u8,
         over_odo: crate::glue::Radio_OverrideOdometry,
     ) -> Result<(), ()> {
-        if let Some(base_station) = &mut self.get_base_station_mux() {
-            if let Some(bs) = &mut **base_station {
-                match bs.serial.send_over_odo(id, over_odo) {
-                    Ok(_) => (),
-                    Err(_) => return Err(()),
-                }
-            }
-        }
-        Err(())
+        self.send_message_channel.send((id, Radio_Message_Rust::OverrideOdometry(over_odo))).map_err(|_| ())?;
+        Ok(())
     }
 
     // Connect to a base station over a serial COM port
