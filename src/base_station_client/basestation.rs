@@ -445,7 +445,6 @@ impl Monitor {
 
     pub fn set_channel(
         &self,
-        id: crate::glue::Radio_SSL_ID,
         chan : u8,
     ) -> Result<(), ()> {
         let mcm = crate::glue::Radio_MultiConfigMessage{
@@ -455,7 +454,7 @@ impl Monitor {
             _pad: 0,
             values: [chan as u32, 0, 0, 0, 0],
         };
-        self.send_mcm(id, mcm)
+        self.send_mcm(crate::glue::Radio_BaseStation_ID, mcm)
     }
 
     // Send odometry override
