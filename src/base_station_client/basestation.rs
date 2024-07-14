@@ -448,9 +448,9 @@ impl Monitor {
         chan : u8,
     ) -> Result<(), ()> {
         let mcm = crate::glue::Radio_MultiConfigMessage{
-            operation: crate::glue::HG_ConfigOperation::NONE,
+            operation: crate::glue::HG_ConfigOperation::WRITE,
             vars: [HG_Variable::RADIO_CHANNEL, HG_Variable::NONE, HG_Variable::NONE, HG_Variable::NONE, HG_Variable::NONE],
-            type_: HG_VariableType::U8,
+            type_: HG_VariableType::VOID,
             _pad: 0,
             values: [chan as u32, 0, 0, 0, 0],
         };
