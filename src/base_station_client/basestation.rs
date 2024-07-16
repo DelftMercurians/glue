@@ -459,6 +459,27 @@ impl Monitor {
         self.send_mcm(crate::glue::Radio_BaseStation_ID, mcm)
     }
 
+    // Send heading override
+    pub fn set_current_heading(
+        &self,
+        id: crate::glue::Radio_SSL_ID,
+        heading_rad: f32,
+    ) -> Result<(), ()> {
+        self.send_message_channel.send((id, Radio_Message_Rust::OverrideOdometry(
+            Radio_OverrideOdometry{
+                _pad: [0; 12],
+                _pad0: 0,
+                pos_x: 0.0,
+                pos_y: 0.0,
+                ang_z: heading_rad,
+                set_pos_x: false,
+                set_pos_y: false,
+                set_ang_z: true,
+            }
+        ))).map_err(|_| ())?;
+        Ok(())
+    }
+
     // Send odometry override
     pub fn send_over_odo(
         &self,
