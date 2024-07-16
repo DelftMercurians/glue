@@ -217,7 +217,7 @@ pub struct Monitor {
     base_station_mux: std::sync::Arc<std::sync::Mutex<Option<BaseStation>>>,
     debug_mux: std::sync::Arc<std::sync::Mutex<Debug>>,
     stop_channel: std::sync::mpsc::Sender<()>,
-    send_command_channel: std::sync::mpsc::Sender<(Radio_SSL_ID, Radio_Command)>,
+    send_command_channel: ring_channel::RingSender<(Radio_SSL_ID, Radio_Command)>,
     send_message_channel: std::sync::mpsc::Sender<(Radio_SSL_ID, Radio_Message_Rust)>,
 
     robot_status_channel: ring_channel::RingReceiver<[Robot; MAX_NUM_ROBOTS]>,
@@ -284,7 +284,7 @@ impl Monitor {
         let mux_clone = std::sync::Arc::clone(&base_station_mux);
         let debug_mux_clone = std::sync::Arc::clone(&debug_mux);
         let (stop_channel, stop_receiver) = std::sync::mpsc::channel();
-        let (send_command_channel, command_receiver) = std::sync::mpsc::channel();
+        let (send_command_channel, command_receiver) = ring_channel::ring_channel(NonZeroUsize::new(3).unwrap());
         let (send_message_channel, message_receiver) = std::sync::mpsc::channel();
         
         let (robot_status_sender, robot_status_channel) = ring_channel::ring_channel(NonZeroUsize::new(1).unwrap());
@@ -328,8 +328,8 @@ impl Monitor {
                                         Err(_) => println!("Error transmitting command"),
                                     }
                                 }
-                                Err(std::sync::mpsc::TryRecvError::Disconnected) => { break; }
-                                Err(std::sync::mpsc::TryRecvError::Empty) => { break; }
+                                Err(ring_channel::TryRecvError::Disconnected) => { break; }
+                                Err(ring_channel::TryRecvError::Empty) => { break; }
                             }
                         }
                         match message_receiver.try_recv() {
