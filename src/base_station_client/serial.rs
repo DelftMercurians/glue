@@ -31,9 +31,9 @@ impl Serial {
     }
 
     pub fn open_mirror(&mut self, port_name : &str) -> Result<(), serialport::Error> {
-        self.mirror = Some(serialport::new(port_name, 115200)
-                            .timeout(Duration::from_millis(10))
-                            .open()?);
+        // self.mirror = Some(serialport::new(port_name, 115200)
+        //                     .timeout(Duration::from_millis(10))
+        //                     .open()?);
         Ok(())
     }
 
@@ -154,16 +154,16 @@ impl Serial {
 
     fn read(&mut self) -> Result<(), ()> {
         // Drop everything coming in on the mirror port
-        if let Some(mirror) = &mut self.mirror {
-            match mirror.bytes_to_read() {
-                Ok(0) => (),
-                Ok(_) => {
-                    let mut drop_buff = [0; 256];
-                    let _ = mirror.read(&mut drop_buff);
-                },
-                Err(_) => (),
-            }
-        }
+        // if let Some(mirror) = &mut self.mirror {
+        //     match mirror.bytes_to_read() {
+        //         Ok(0) => (),
+        //         Ok(_) => {
+        //             let mut drop_buff = [0; 256];
+        //             let _ = mirror.read(&mut drop_buff);
+        //         },
+        //         Err(_) => (),
+        //     }
+        // }
         match self.port.bytes_to_read() {
             Ok(0) => return Ok(()),
             Ok(_) => (),
@@ -172,13 +172,13 @@ impl Serial {
         match self.port.read(&mut self.serial_buf[self.glob_index..]) {
             Ok(length) => {
                 // Transmit everything on the mirror port
-                if self.check_carrier_detect() {
-                    if let Some(mirror) = &mut self.mirror {
-                        let mut buffer_copy: Vec<u8> = vec![0; length];
-                        buffer_copy.copy_from_slice(&self.serial_buf[self.glob_index..self.glob_index+length]);
-                        let _ = mirror.write(&buffer_copy);
-                    }
-                }
+                // if self.check_carrier_detect() {
+                //     if let Some(mirror) = &mut self.mirror {
+                //         let mut buffer_copy: Vec<u8> = vec![0; length];
+                //         buffer_copy.copy_from_slice(&self.serial_buf[self.glob_index..self.glob_index+length]);
+                //         let _ = mirror.write(&buffer_copy);
+                //     }
+                // }
                 self.glob_index += length;
                 if self.glob_index == SERIAL_BUF_LEN {
                     panic!("Buffer is full");   // TODO figure out what to do here
