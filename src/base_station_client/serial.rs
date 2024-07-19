@@ -208,14 +208,14 @@ impl Serial {
         false
     }
 
-    pub fn read_packet(&mut self) -> Option<Vec<u8>> {
-        self.read().ok()?;
+    pub fn read_packet(&mut self) -> Result<Option<Vec<u8>>, ()> {
+        self.read()?;
         if let Some(index) = self.serial_buf[..self.glob_index].iter().position(|&x| x == 0b10100101) {
             // Start byte found
 
             if self.glob_index < index + 2 {
                 // println!("Buffer not long enough to get a size");
-                return None;
+                return Ok(None);
             }
             
             // Length of data
@@ -223,14 +223,14 @@ impl Serial {
 
             if self.glob_index < index + len + 3 {
                 // println!("Buffer not long enough for all data len = {len}");
-                return None;
+                return Ok(None);
             }
 
             if len > 50 {
                 eprintln!("SERIAL: Bad packet: size too large");
                 self.serial_buf.rotate_left(index + 1); // probably quite expensive, consider a circular buffer
                 self.glob_index -= index + 1;
-                return None;
+                return Ok(None);
             }
 
             let data = self.serial_buf[(index+2)..(index+2+len)].to_vec();
@@ -245,19 +245,19 @@ impl Serial {
                 eprintln!("SERIAL: Bad packet: CRC failed");
                 self.serial_buf.rotate_left(index + 1);
                 self.glob_index -= index + 1;
-                return None;
+                return Ok(None);
             }
 
             self.serial_buf.rotate_left(index + 3 + len);
             self.glob_index -= index + 3 + len;
 
-            return Some(data);
+            return Ok(Some(data));
         } else {
             // No start byte, keep rotating buffer
             self.serial_buf.rotate_left(self.glob_index);
             self.glob_index -= self.glob_index;
         }
-        None
+        Ok(None)
     }
 }
 

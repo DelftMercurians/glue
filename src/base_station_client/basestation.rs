@@ -1,5 +1,7 @@
 #![allow(dead_code, unused_variables)]
 
+use serialport::Error;
+
 use super::robot::*;
 use super::serial::*;
 use super::utils::Stamped;
@@ -56,7 +58,7 @@ impl BaseStation {
         let mut update_robots = false;
         let mut update_base_info = false;
         loop {
-            if let Some(data) = self.serial.read_packet() {
+            if let Some(data) = self.serial.read_packet()? {
                 const LEN_BASE_INFORMATION: usize =
                     std::mem::size_of::<crate::glue::Base_Information>();
                 const LEN_MESSAGE_WRAPER: usize =
@@ -229,6 +231,8 @@ pub struct Monitor {
     // con_rq: ring_channel::RingSender<String>,
     // con_rq_ack: ring_channel::RingReceiver<String>,
 
+    error_receiver: std::sync::mpsc::Receiver<String>,
+
     bs_connected: ring_channel::RingReceiver<bool>,
     most_recent_bs_connected: bool,
 }
@@ -292,6 +296,8 @@ impl Monitor {
             
         let (bs_connected_sender, bs_connected) = ring_channel::ring_channel(NonZeroUsize::new(1).unwrap());
         
+        let (error_sender, error_receiver) = std::sync::mpsc::channel();
+
         // let (con_rq, con_rq_rec) = ring_channel::ring_channel(NonZeroUsize::new(1).unwrap());
         // let (con_rq_ack_send, con_rq_ack) = ring_channel::ring_channel(NonZeroUsize::new(1).unwrap());
         
@@ -325,10 +331,17 @@ impl Monitor {
                                 Ok((id, command)) => {
                                     match base_station.serial.send_command(id,command) {
                                         Ok(_) => (),
-                                        Err(_) => println!("Error transmitting command"),
+                                        Err(_) => {
+                                            error_sender.send("Error transmitting command".to_owned()).unwrap();
+                                            let _ = bs_connected_sender.send(false);
+                                        },
                                     }
                                 }
-                                Err(ring_channel::TryRecvError::Disconnected) => { break; }
+                                Err(ring_channel::TryRecvError::Disconnected) => { 
+                                    error_sender.send("error_sender disconnected".to_owned()).unwrap();
+                                    let _ = bs_connected_sender.send(false);
+                                    break;
+                                },
                                 Err(ring_channel::TryRecvError::Empty) => { break; }
                             }
                         }
@@ -336,10 +349,16 @@ impl Monitor {
                             Ok((id, msg)) => {
                                 match base_station.serial.send_message(id,msg) {
                                     Ok(_) => (),
-                                    Err(_) => println!("Error transmitting message"),
+                                    Err(_) => {
+                                        error_sender.send("Error transmitting message".to_owned()).unwrap();
+                                        let _ = bs_connected_sender.send(false);
+                                    },
                                 }
                             }
-                            Err(std::sync::mpsc::TryRecvError::Disconnected) => (),
+                            Err(std::sync::mpsc::TryRecvError::Disconnected) => {
+                                error_sender.send("message_receiver disconnected".to_owned()).unwrap();
+                                let _ = bs_connected_sender.send(false);
+                            },
                             Err(std::sync::mpsc::TryRecvError::Empty) => (),
                         }
                         let time_start = std::time::Instant::now();
@@ -366,6 +385,7 @@ impl Monitor {
             most_recent_robot_status: [Robot::default(); MAX_NUM_ROBOTS],
             base_station_info_channel,
             most_recent_base_station_info: Stamped::NothingYet,
+            error_receiver,
             bs_connected,
             most_recent_bs_connected: false,
             // con_rq,
@@ -376,6 +396,13 @@ impl Monitor {
     /// Stop the monitor thread
     pub fn stop(self) {
         let _ = self.stop_channel.send(());
+    }
+
+    pub fn has_error(&self) -> Option<String> {
+        if let Ok(err) = self.error_receiver.try_recv() {
+            return Some(err);
+        }
+        None
     }
 
     // Get base station info
