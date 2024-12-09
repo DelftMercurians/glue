@@ -46,20 +46,12 @@ impl ParseCallbacks for MacroCallback {
 
 
 fn main() {
-
     let macros = Arc::new(RwLock::new(HashSet::new()));
-
-    // Tell cargo to look for shared libraries in the specified directory
-    // println!("cargo:rustc-link-search=C:\\Users\\thomas\\.platformio\\packages\\toolchain-gccarmnoneeabi\\arm-none-eabi\\include\\");
-
-    // Tell cargo to tell rustc to link the system bzip2
-    // shared library.
-    // println!("cargo:rustc-link-lib=bz2");
 
     // The bindgen::Builder is the main entry point
     // to bindgen, and lets you build up options for
     // the resulting bindings.
-    let bindings = bindgen::Builder::default()
+    let mut bindgen_builder = bindgen::Builder::default()
         // The input header we would like to generate
         // bindings for.
         .raw_line("use num_derive::{ToPrimitive,FromPrimitive};")
@@ -82,6 +74,7 @@ fn main() {
         .rustified_enum("Radio::Access")
         .clang_arg("--target=arm-none-eabi")
         .clang_arg("-DUSING_BINDGEN")
+       
         .blocklist_file("^(.*can_id\\.h$)$")
         .parse_callbacks(Box::new(MacroCallback {
             macros: macros.clone(),
@@ -90,7 +83,14 @@ fn main() {
         }))
         // Tell cargo to invalidate the built crate whenever any of the
         // included header files changed.
-        .parse_callbacks(Box::new(bindgen::CargoCallbacks::new()))
+        .parse_callbacks(Box::new(bindgen::CargoCallbacks::new()));
+
+    #[cfg(target_os = "macos")]
+    {
+        bindgen_builder = bindgen_builder.clang_arg("-D_LIBCPP_HAS_NO_THREADS");
+    }
+
+    let bindings = bindgen_builder
         // Finish the builder and generate the bindings.
         .generate()
         // Unwrap the Result and panic on failure.
