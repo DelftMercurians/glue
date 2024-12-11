@@ -15,10 +15,9 @@ pub struct Serial {
 impl Serial {
     pub fn new(port_name: &str) -> Result<Serial, serialport::Error> {
         Ok(Serial {
-            port: serialport::new(port_name, 115200).timeout(Duration::from_millis(10)).open().map_err(|err| {
-                eprintln!("serial error: {err:?}");
-                err
-            })?,
+            port: serialport::new(port_name, 115200)
+                .timeout(Duration::from_millis(10))
+                .open()?,
             serial_buf: vec![0; SERIAL_BUF_LEN],
             glob_index: 0,
         })
@@ -26,7 +25,9 @@ impl Serial {
 
     fn is_basestation(port: &serialport::SerialPortInfo) -> bool {
         match &port.port_type {
-            serialport::SerialPortType::UsbPort(info) => (info.vid == 0x0483) && (info.pid == 0x5740),
+            serialport::SerialPortType::UsbPort(info) => {
+                (info.vid == 0x0483) && (info.pid == 0x5740)
+            }
             _ => false,
         }
     }
@@ -69,7 +70,11 @@ impl Serial {
         //         }
         //     }
         // }
-        ports.into_iter().filter(|p| !filter || Self::is_basestation(&p)).map(|p| p.port_name).collect()
+        ports
+            .into_iter()
+            .filter(|p| !filter || Self::is_basestation(&p))
+            .map(|p| p.port_name)
+            .collect()
     }
 
     pub fn send(&mut self, line: &str) {
@@ -79,17 +84,33 @@ impl Serial {
         };
     }
 
-    pub fn send_command(&mut self, id: crate::glue::Radio_SSL_ID, command: crate::glue::Radio_Command) -> Result<(), std::io::Error> {
+    pub fn send_command(
+        &mut self,
+        id: crate::glue::Radio_SSL_ID,
+        command: crate::glue::Radio_Command,
+    ) -> Result<(), std::io::Error> {
         let msg = crate::glue::Radio_Message_Rust::Command(command).wrap();
-        let mw = crate::glue::Radio_MessageWrapper { id, _pad: [0, 0, 0], msg };
+        let mw = crate::glue::Radio_MessageWrapper {
+            id,
+            _pad: [0, 0, 0],
+            msg,
+        };
         let bytes = crate::glue::to_packet(mw);
 
         self.port.write_all(&bytes)
     }
 
-    pub fn send_over_odo(&mut self, id: crate::glue::Radio_SSL_ID, over_odo: crate::glue::Radio_OverrideOdometry) -> Result<(), std::io::Error> {
+    pub fn send_over_odo(
+        &mut self,
+        id: crate::glue::Radio_SSL_ID,
+        over_odo: crate::glue::Radio_OverrideOdometry,
+    ) -> Result<(), std::io::Error> {
         let msg = crate::glue::Radio_Message_Rust::OverrideOdometry(over_odo).wrap();
-        let mw = crate::glue::Radio_MessageWrapper { id, _pad: [0, 0, 0], msg };
+        let mw = crate::glue::Radio_MessageWrapper {
+            id,
+            _pad: [0, 0, 0],
+            msg,
+        };
         let bytes = crate::glue::to_packet(mw);
 
         self.port.write_all(&bytes)
@@ -117,7 +138,10 @@ impl Serial {
 
     pub fn read_packet(&mut self) -> Option<Vec<u8>> {
         self.read().ok()?;
-        if let Some(index) = self.serial_buf[..self.glob_index].iter().position(|&x| x == 0b10100101) {
+        if let Some(index) = self.serial_buf[..self.glob_index]
+            .iter()
+            .position(|&x| x == 0b10100101)
+        {
             // Start byte found
 
             if self.glob_index < index + 2 {
