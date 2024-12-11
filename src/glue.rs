@@ -2,7 +2,6 @@
 
 use num_traits::FromPrimitive;
 pub const crc_calc: crc::Crc<u8> = crc::Crc::<u8>::new(&crc::CRC_8_SMBUS);
-use zerocopy::AsBytes;
 
 include!(concat!(env!("OUT_DIR"), "/bindings.rs"));
 
@@ -199,7 +198,7 @@ impl Radio_Message_Rust {
 }
 
 
-pub fn to_packet<T: AsBytes>(data : T) -> Vec<u8> {
+pub fn to_packet<T: zerocopy::AsBytes>(data : T) -> Vec<u8> {
     let raw_data = data.as_bytes();
 
     let mut a = vec![0; raw_data.len() + 3];
