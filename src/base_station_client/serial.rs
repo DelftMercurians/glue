@@ -30,7 +30,7 @@ impl Serial {
         self
     }
 
-    pub fn open_mirror(&mut self, port_name : &str) -> Result<(), serialport::Error> {
+    pub fn open_mirror(&mut self, _port_name : &str) -> Result<(), serialport::Error> {
         // self.mirror = Some(serialport::new(port_name, 115200)
         //                     .timeout(Duration::from_millis(10))
         //                     .open()?);
@@ -81,6 +81,12 @@ impl Serial {
         a
     }
 
+    #[cfg(target_os = "macos")]
+    pub fn list_ports(filter : bool) -> Vec<String> {
+        let ports = serialport::available_ports().expect("No ports found!");
+        ports.into_iter().filter(|p| !filter || Self::is_basestation(&p)).map(|p| p.port_name).collect()
+    }
+
     #[cfg(target_os = "linux")]
     pub fn list_unknown_ports() -> Vec<String> {
         let ports = serialport::available_ports().expect("No ports found!");
@@ -92,6 +98,12 @@ impl Serial {
     }
 
     #[cfg(target_os = "windows")]
+    pub fn list_unknown_ports() -> Vec<String> {
+        let ports = serialport::available_ports().expect("No ports found!");
+        ports.into_iter().filter(|p| Self::is_virtual(&p)).map(|p| p.port_name).collect()
+    }
+
+    #[cfg(target_os = "macos")]
     pub fn list_unknown_ports() -> Vec<String> {
         let ports = serialport::available_ports().expect("No ports found!");
         ports.into_iter().filter(|p| Self::is_virtual(&p)).map(|p| p.port_name).collect()

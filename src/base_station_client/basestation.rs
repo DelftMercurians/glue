@@ -1,5 +1,5 @@
 #![allow(dead_code, unused_variables)]
-
+#[allow(unused_imports)]
 use serialport::Error;
 
 use super::robot::*;
