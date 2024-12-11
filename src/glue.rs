@@ -9,13 +9,55 @@ include!(concat!(env!("OUT_DIR"), "/bindings.rs"));
 pub enum Radio_Message_Rust {
     Command(Radio_Command),
     ImuReadings(Radio_ImuReadings),
-    // ConfigMessage(Radio_ConfigMessage),
+    MultiConfigMessage(Radio_MultiConfigMessage),
     PrimaryStatusHF(Radio_PrimaryStatusHF),
     PrimaryStatusLF(Radio_PrimaryStatusLF),
     OdometryReading(Radio_OdometryReading),
     OverrideOdometry(Radio_OverrideOdometry),
     // Reply(Radio_Reply),
     None,
+}
+
+impl Radio_MultiConfigMessage {
+    pub fn write() -> Self {
+        Radio_MultiConfigMessage{
+            vars: [HG_Variable::NONE; 5],
+            operation: HG_ConfigOperation::WRITE,
+            type_: HG_VariableType::VOID,
+            _pad: 0,
+            values: [0; 5],
+        }
+    }
+
+    pub fn add(&mut self, var : HG_Variable, value : u32) -> Self {
+        for i in 0..5 {
+            if self.vars[i] != HG_Variable::NONE { continue }
+            self.vars[i] = var;
+            self.values[i] = value;
+            break
+        }
+        *self
+    }
+
+    pub fn read() -> Self {
+        Radio_MultiConfigMessage{
+            vars: [HG_Variable::NONE; 5],
+            operation: HG_ConfigOperation::READ,
+            type_: HG_VariableType::VOID,
+            _pad: 0,
+            values: [0; 5],
+        }
+    }
+
+    pub fn set_default() -> Self {
+        Radio_MultiConfigMessage{
+            vars: [HG_Variable::NONE; 5],
+            operation: HG_ConfigOperation::SET_DEFAULT,
+            type_: HG_VariableType::VOID,
+            _pad: 0,
+            values: [0; 5],
+        }
+    }
 }
 
 
@@ -52,6 +94,13 @@ impl Radio_Message_Rust {
                         ir,
                         _pad1: [0; 4],
                     }
+                },
+            },
+            Self::MultiConfigMessage(mcm) => Radio_Message {
+                mt: Radio_MessageType::MultiConfigMessage,
+                _pad: [0; 3],
+                msg: Radio_Message__bindgen_ty_1 {
+                    mcm,
                 },
             },
             Self::OdometryReading(odo) => Radio_Message {
@@ -122,6 +171,9 @@ impl Radio_Message_Rust {
                 },
                 Radio_MessageType::OdometryReading => {
                     return Radio_Message_Rust::OdometryReading(msg.msg.odo)
+                },
+                Radio_MessageType::MultiConfigMessage => {
+                    return Radio_Message_Rust::MultiConfigMessage(msg.msg.mcm)
                 },
                 Radio_MessageType::OverrideOdometry => {
                     return Radio_Message_Rust::OverrideOdometry(msg.msg.over_odo)

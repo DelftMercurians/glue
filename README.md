@@ -84,7 +84,7 @@ commands[robot_id] = Some(glue::Radio_Command {
         z: 0.0, // Z speed (f32) [rad/s]
     },
     dribbler_speed: 6000.0,    // Dribbler speed (f32) [rad/s]
-    kicker_command: glue::Radio_KickerCommand::NONE,   // Kicker command (glue::Radio_KickerCommand enum)
+    robot_command: glue::Radio_RobotCommand::NONE,   // Kicker command (glue::Radio_RobotCommand enum)
     _pad: [0, 0, 0],    // padding, leave zero
     kick_time: 0.0, // Kick time (f32) [ms]
     fan_speed: 0.0, // Fan speed (f32) [%]
