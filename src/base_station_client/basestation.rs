@@ -111,6 +111,19 @@ impl BaseStation {
                                         (*dbg).update = true;
                                     }
                                 }
+                                Radio_Message_Rust::Command(command) => {
+                                    self.robots[msg.id as usize].update_command(command);
+                                    update_robots = true;
+                                    if let Some(&mut ref mut dbg) = debug {
+                                        (*dbg).incoming_lines.push_front((
+                                            chrono::Local::now(),
+                                            format!("{}", msg.id),
+                                            format!("{:?}", command),
+                                        ));
+                                        (*dbg).incoming_lines.truncate(DEBUG_SCROLLBACK_LIMIT);
+                                        (*dbg).update = true;
+                                    }
+                                }
                                 Radio_Message_Rust::ImuReadings(imu_reading) => {
                                     self.robots[msg.id as usize].update_imu_reading(imu_reading);
                                     update_robots = true;
