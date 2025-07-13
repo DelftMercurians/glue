@@ -9,7 +9,7 @@ use crate::glue::*;
 
 use std::num::NonZeroUsize;
 
-pub const MAX_NUM_ROBOTS: usize = 16;
+pub const MAX_NUM_ROBOTS: usize = 6;
 
 const DEBUG_SCROLLBACK_LIMIT: usize = 500;
 
