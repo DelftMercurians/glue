@@ -51,6 +51,7 @@ fn main() {
     // The bindgen::Builder is the main entry point
     // to bindgen, and lets you build up options for
     // the resulting bindings.
+    #[allow(unused_mut)]
     let mut bindgen_builder = bindgen::Builder::default()
         // The input header we would like to generate
         // bindings for.

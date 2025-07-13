@@ -223,11 +223,13 @@ impl Serial {
         return Err(());
     }
 
+    #[allow(dead_code)]
     #[cfg(target_os = "linux")]
     fn check_carrier_detect(&mut self) -> bool {
         true
     }
 
+    #[allow(dead_code)]
     #[cfg(target_os = "windows")]
     fn check_carrier_detect(&mut self) -> bool {
         if let Some(mirror) = &mut self.mirror {
