@@ -132,6 +132,22 @@ impl Serial {
         self.port.write_all(&bytes)
     }
 
+    pub fn send_global_command(
+        &mut self,
+        id: crate::glue::Radio_SSL_ID,
+        command: crate::glue::Radio_GlobalCommand,
+    ) -> Result<(), std::io::Error> {
+        let msg = crate::glue::Radio_Message_Rust::GlobalCommand(command).wrap();
+        let mw = crate::glue::Radio_MessageWrapper {
+            id,
+            _pad: [0, 0, 0],
+            msg,
+        };
+        let bytes = crate::glue::to_packet(mw);
+
+        self.port.write_all(&bytes)
+    }
+
     pub fn send_message(&mut self, id : crate::glue::Radio_SSL_ID , msg : crate::glue::Radio_Message_Rust) -> Result<(), std::io::Error> {
         let msg = msg.wrap();
         let mw = crate::glue::Radio_MessageWrapper {

@@ -7,6 +7,7 @@ include!(concat!(env!("OUT_DIR"), "/bindings.rs"));
 
 pub enum Radio_Message_Rust {
     Command(Radio_Command),
+    GlobalCommand(Radio_GlobalCommand),
     ImuReadings(Radio_ImuReadings),
     MultiConfigMessage(Radio_MultiConfigMessage),
     PrimaryStatusHF(Radio_PrimaryStatusHF),
@@ -83,6 +84,13 @@ impl Radio_Message_Rust {
                 _pad: [0; 3],
                 msg: Radio_Message__bindgen_ty_1 {
                     c,
+                },
+            },
+            Self::GlobalCommand(gc) => Radio_Message {
+                mt: Radio_MessageType::GlobalCommand,
+                _pad: [0; 3],
+                msg: Radio_Message__bindgen_ty_1 {
+                    gc,
                 },
             },
             Self::ImuReadings(ir) => Radio_Message {
@@ -164,6 +172,7 @@ impl Radio_Message_Rust {
             // Accessing stuff from a union requires unsafe
             match msg.mt {
                 Radio_MessageType::Command =>  return Radio_Message_Rust::Command(msg.msg.c),
+                Radio_MessageType::GlobalCommand =>  return Radio_Message_Rust::GlobalCommand(msg.msg.gc),
                 Radio_MessageType::ImuReadings =>  return Radio_Message_Rust::ImuReadings(msg.msg.__bindgen_anon_2.ir),
                 Radio_MessageType::PrimaryStatusHF => {
                     return Radio_Message_Rust::PrimaryStatusHF(msg.msg.ps_hf)

@@ -220,6 +220,7 @@ pub struct Monitor {
     debug_mux: std::sync::Arc<std::sync::Mutex<Debug>>,
     stop_channel: std::sync::mpsc::Sender<()>,
     send_command_channel: ring_channel::RingSender<(Radio_SSL_ID, Radio_Command)>,
+    send_global_command_channel: ring_channel::RingSender<(Radio_SSL_ID, Radio_GlobalCommand)>,
     send_message_channel: std::sync::mpsc::Sender<(Radio_SSL_ID, Radio_Message_Rust)>,
 
     robot_status_channel: ring_channel::RingReceiver<[Robot; MAX_NUM_ROBOTS]>,
@@ -289,6 +290,7 @@ impl Monitor {
         let debug_mux_clone = std::sync::Arc::clone(&debug_mux);
         let (stop_channel, stop_receiver) = std::sync::mpsc::channel();
         let (send_command_channel, command_receiver) = ring_channel::ring_channel(NonZeroUsize::new(3).unwrap());
+        let (send_global_command_channel, global_command_receiver) = ring_channel::ring_channel(NonZeroUsize::new(3).unwrap());
         let (send_message_channel, message_receiver) = std::sync::mpsc::channel();
         
         let (robot_status_sender, robot_status_channel) = ring_channel::ring_channel(NonZeroUsize::new(1).unwrap());
@@ -326,6 +328,25 @@ impl Monitor {
                             },
                             Err(_) => disconnect = true,
                         };
+                        for _ in 0..2 { // Limit how often this can run
+                            match global_command_receiver.try_recv() {
+                                Ok((id, command)) => {
+                                    match base_station.serial.send_global_command(id,command) {
+                                        Ok(_) => (),
+                                        Err(_) => {
+                                            error_sender.send("Error transmitting command".to_owned()).unwrap();
+                                            let _ = bs_connected_sender.send(false);
+                                        },
+                                    }
+                                }
+                                Err(ring_channel::TryRecvError::Disconnected) => { 
+                                    error_sender.send("error_sender disconnected".to_owned()).unwrap();
+                                    let _ = bs_connected_sender.send(false);
+                                    break;
+                                },
+                                Err(ring_channel::TryRecvError::Empty) => { break; }
+                            }
+                        }
                         for _ in 0..2 { // Limit how often this can run
                             match command_receiver.try_recv() {
                                 Ok((id, command)) => {
@@ -380,6 +401,7 @@ impl Monitor {
             debug_mux,
             stop_channel,
             send_command_channel,
+            send_global_command_channel,
             send_message_channel,
             robot_status_channel,
             most_recent_robot_status: [Robot::default(); MAX_NUM_ROBOTS],
@@ -451,6 +473,16 @@ impl Monitor {
         command: crate::glue::Radio_Command,
     ) -> Result<(), ()> {
         self.send_command_channel.send((id, command)).map_err(|_| ())?;
+        Ok(())
+    }
+
+    // Send command to single robot, global framed
+    pub fn send_single_global(
+        &self,
+        id: crate::glue::Radio_SSL_ID,
+        gcommand: crate::glue::Radio_GlobalCommand,
+    ) -> Result<(), ()> {
+        self.send_global_command_channel.send((id, gcommand)).map_err(|_| ())?;
         Ok(())
     }
 

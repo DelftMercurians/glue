@@ -23,7 +23,7 @@ impl ParseCallbacks for MacroCallback {
                     "ToPrimitive".into(),
                     "AsBytes".into(),
                 ],
-            "HG_Pose" | "CAN_VARIABLE" | "Radio_ConfigMessage" | "Radio_Command" | "Radio_Reply" |
+            "HG_Pose" | "CAN_VARIABLE" | "Radio_ConfigMessage" | "Radio_Command" | "Radio_Reply" | "Radio_GlobalCommand" |
             "Radio_PrimaryStatusHF" | "Radio_PrimaryStatusLF" |
             "Radio_ImuReadings" | "MessageType" | "Radio_Message" | "Radio_RobotCommand" |
             "Radio_Message__bindgen_ty_1" | "Radio_Message__bindgen_ty_1__bindgen_ty_1" | "Radio_Message__bindgen_ty_1__bindgen_ty_2" |
