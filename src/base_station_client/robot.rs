@@ -169,9 +169,10 @@ impl Robot {
     }
 
     // //  Returns an Option containing the downforce duct pressure (TODO figure out unit)
-    // pub fn downforce_pressure(&self) -> Option<f32> {
-    //     self.status_hf.have(|status_hf| {status_hf.pressure as f32 * glue::HG_SCALE_PRESSURE})
-    // }
+    pub fn downforce_pressure(&self) -> Option<u16> {
+        self.status_hf.have(|status_hf| {status_hf.pressure})
+        // self.status_hf.have(|status_hf| {status_hf.pressure as f32 * glue::HG_SCALE_PRESSURE})
+    }
 
     //  Returns an Option containing the imu reading struct
     pub fn imu_reading(&self) -> Option<Radio_ImuReadings> {
