@@ -303,7 +303,7 @@ impl Monitor {
         let debug_mux_clone = std::sync::Arc::clone(&debug_mux);
         let (stop_channel, stop_receiver) = std::sync::mpsc::channel();
         let (send_command_channel, command_receiver) = ring_channel::ring_channel(NonZeroUsize::new(3).unwrap());
-        let (send_global_command_channel, global_command_receiver) = ring_channel::ring_channel(NonZeroUsize::new(3).unwrap());
+        let (send_global_command_channel, global_command_receiver) = ring_channel::ring_channel(NonZeroUsize::new(6).unwrap()); // longer ring buffer?
         let (send_message_channel, message_receiver) = std::sync::mpsc::channel();
         
         let (robot_status_sender, robot_status_channel) = ring_channel::ring_channel(NonZeroUsize::new(1).unwrap());
