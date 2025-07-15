@@ -396,7 +396,7 @@ impl Monitor {
                             Err(std::sync::mpsc::TryRecvError::Empty) => (),
                         }
                         let time_start = std::time::Instant::now();
-                        while time_start.elapsed() < std::time::Duration::from_millis(10) {  }  // Blocking sleep alternative
+                        while time_start.elapsed() < std::time::Duration::from_millis(20) {  }  // Blocking sleep alternative
                         // std::thread::sleep(std::time::Duration::from_micros(1)); // Give other threads an opportunity to access the mutex
                     } else {
                         let _ = bs_connected_sender.send(false);
