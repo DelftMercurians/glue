@@ -6,7 +6,8 @@ pub struct Robot {
     status_hf: Stamped<crate::glue::Radio_PrimaryStatusHF>,
     status_lf: Stamped<crate::glue::Radio_PrimaryStatusLF>,
     imu_reading: Stamped<crate::glue::Radio_ImuReadings>,
-    // command: Stamped<crate::glue::Radio_Command>,
+    command: Stamped<crate::glue::Radio_Command>,
+    global_command: Stamped<crate::glue::Radio_GlobalCommand>,
 }
 
 impl Default for Robot {
@@ -15,7 +16,8 @@ impl Default for Robot {
             status_hf: Stamped::NothingYet,
             status_lf: Stamped::NothingYet,
             imu_reading: Stamped::NothingYet,
-            // command: Stamped::NothingYet,
+            command: Stamped::NothingYet,
+            global_command: Stamped::NothingYet,
         }
     }
 }
@@ -30,9 +32,12 @@ impl Robot {
     pub fn update_imu_reading(&mut self, imu_reading : crate::glue::Radio_ImuReadings) {
         self.imu_reading.update(imu_reading);
     }
-    // pub fn update_command(&mut self, command : crate::glue::Radio_Command) {
-    //     self.command.update(command);
-    // }
+    pub fn update_command(&mut self, command : crate::glue::Radio_Command) {
+        self.command.update(command);
+    }
+    pub fn update_global_command(&mut self, global_command : crate::glue::Radio_GlobalCommand) {
+        self.global_command.update(global_command);
+    }
 
     pub fn time_since_update(&self) -> Option<std::time::Duration> {
         const infinite_time : std::time::Duration = std::time::Duration::from_secs(300);
@@ -71,9 +76,13 @@ impl Robot {
         self.imu_reading.time_since()
     }
 
-    // pub fn time_since_command_update(&self) -> Option<std::time::Duration> {
-    //     self.command.time_since()
-    // }
+    pub fn time_since_command_update(&self) -> Option<std::time::Duration> {
+        self.command.time_since()
+    }
+
+    pub fn time_since_global_command_update(&self) -> Option<std::time::Duration> {
+        self.global_command.time_since()
+    }
 
     pub fn is_online(&self) -> bool {
         self.time_since_update().map_or(false, |time| time < std::time::Duration::from_millis(400)) 
@@ -82,9 +91,14 @@ impl Robot {
     //* Accessors for various internal bits *//
 
     // Returns an Option containing the command to the robot
-    // pub fn command(&self) -> Option<glue::Radio_Command> {
-    //     self.command.have(|a| a)
-    // }
+    pub fn command(&self) -> Option<glue::Radio_Command> {
+        self.command.have(|a| a)
+    }
+
+    // Returns an Option containing the command to the robot
+    pub fn global_command(&self) -> Option<glue::Radio_GlobalCommand> {
+        self.global_command.have(|a| a)
+    }
 
     // Returns an Option containing the main microcontroller status
     pub fn primary_status(&self) -> Option<glue::HG_Status> {
@@ -109,6 +123,14 @@ impl Robot {
     // Returns an Option containing the kicker capacitor voltage in Volts
     pub fn kicker_cap_voltage(&self) -> Option<f32> {
         self.status_lf.have(|status_lf| {status_lf.cap_voltage as f32 * glue::HG_KICKER_SCALE_VCAP})
+    }
+
+    pub fn smart_kick_counter(&self) -> Option<u8> {
+        self.status_hf.have(|status_hf| {status_hf.smart_kick_counter_return})
+    }
+
+    pub fn kick_ok_flag(&self) -> Option<u8> {
+        self.status_hf.have(|status_hf| {status_hf.last_kick_ok})
     }
 
     // Returns an Option containing the kicker board temperature in degrees Celsius
