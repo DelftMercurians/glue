@@ -1,4 +1,7 @@
 # glue
+
+[![Rust](https://github.com/DelftMercurians/glue/actions/workflows/rust.yml/badge.svg)](https://github.com/DelftMercurians/glue/actions/workflows/rust.yml)
+
 [Delft Mercurians](https://delftmercurians.nl/)
 
 This code forms a bridge between the BaseStation (running on C++) and the MotherShip (running Rust). It allows us to read out various robot status information and send commands to the robot.
