@@ -18,6 +18,8 @@ jobs:
     - uses: actions/checkout@v4
       with:
           submodules: 'true'
+    - name: Instal libudev
+      run: sudo apt-get -yyq install libudev-dev
     - name: Build
       run: cargo build --verbose
     # - name: Run tests
