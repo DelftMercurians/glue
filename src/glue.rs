@@ -225,10 +225,7 @@ impl Base_Information {
     // Convert raw bytes into Base_Information, with some checks
     pub fn from_bytes(data : Vec<u8>) -> Option<Self> {
         if std::mem::size_of::<Self>() != data.len() { return None; }
-        if let Ok(res) = Base_Information::try_read_from_bytes(&data) {
-            return Some(res)
-        }
-        None
+        Base_Information::try_read_from_bytes(&data).ok()
     }
 }
 
@@ -236,9 +233,6 @@ impl Radio_MessageWrapper {
     // Convert raw bytes into Radio_MessageWrapper, with some checks
     pub fn from_bytes(data : Vec<u8>) -> Option<Self> {
         if std::mem::size_of::<Self>() != data.len() { return None; }
-        if let Ok(res) = Radio_MessageWrapper::try_read_from_bytes(&data) {
-            return Some(res)
-        }
-        None
+        Radio_MessageWrapper::try_read_from_bytes(&data).ok()
     }
 }
