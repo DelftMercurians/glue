@@ -1,6 +1,7 @@
 #![allow(dead_code)]
 
 use num_traits::FromPrimitive;
+use zerocopy::TryFromBytes;
 pub const crc_calc: crc::Crc<u8> = crc::Crc::<u8>::new(&crc::CRC_8_SMBUS);
 
 include!(concat!(env!("OUT_DIR"), "/bindings.rs"));
@@ -207,7 +208,7 @@ impl Radio_Message_Rust {
 }
 
 
-pub fn to_packet<T: zerocopy::AsBytes>(data : T) -> Vec<u8> {
+pub fn to_packet<T: zerocopy::IntoBytes + zerocopy::Immutable>(data : T) -> Vec<u8> {
     let raw_data = data.as_bytes();
 
     let mut a = vec![0; raw_data.len() + 3];
@@ -224,11 +225,8 @@ impl Base_Information {
     // Convert raw bytes into Base_Information, with some checks
     pub fn from_bytes(data : Vec<u8>) -> Option<Self> {
         if std::mem::size_of::<Self>() != data.len() { return None; }
-        if let Ok(raw) = <[u8;std::mem::size_of::<Self>()]>::try_from(data) {
-            unsafe {
-                let res: Self = std::mem::transmute(raw);
-                return Some(res);
-            }
+        if let Ok(res) = Base_Information::try_read_from_bytes(&data) {
+            return Some(res)
         }
         None
     }
@@ -238,14 +236,8 @@ impl Radio_MessageWrapper {
     // Convert raw bytes into Radio_MessageWrapper, with some checks
     pub fn from_bytes(data : Vec<u8>) -> Option<Self> {
         if std::mem::size_of::<Self>() != data.len() { return None; }
-        if let Ok(raw) = <[u8;std::mem::size_of::<Self>()]>::try_from(data) {
-            unsafe {
-                let res: Self = std::mem::transmute(raw);
-                if let None = crate::glue::Radio_MessageType::from_u8(std::mem::transmute(res.msg.mt)) { // Check that message type isn't giberish
-                    return None;
-                }
-                return Some(res);
-            }
+        if let Ok(res) = Radio_MessageWrapper::try_read_from_bytes(&data) {
+            return Some(res)
         }
         None
     }
