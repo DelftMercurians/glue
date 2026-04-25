@@ -181,7 +181,7 @@ impl Radio_Message_Rust {
                     return Radio_Message_Rust::OdometryReading(msg.msg.odo)
                 },
                 Radio_MessageType::MultiConfigMessage => {
-                    return Radio_Message_Rust::MultiConfigMessage(msg.msg.mcm)
+                    return Radio_Message_Rust::None
                 },
                 Radio_MessageType::OverrideOdometry => {
                     return Radio_Message_Rust::OverrideOdometry(msg.msg.over_odo)
