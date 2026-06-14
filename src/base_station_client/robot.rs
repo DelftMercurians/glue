@@ -190,6 +190,10 @@ impl Robot {
         self.imu_reading.have(|imu| {imu})
     }
 
+    pub fn breakbeam_raw(&self) -> Option<u16> {
+        self.status_hf.have(|status_hf| {status_hf.breakbeam_raw})
+    }
+
     // Returns an Option containing the left (0) and right (1) pack voltages in Volts
     pub fn pack_voltages(&self) -> Option<[f32; 2]> {
         self.status_lf.have(|status_lf| {
