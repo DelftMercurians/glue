@@ -23,11 +23,11 @@ impl ParseCallbacks for MacroCallback {
                     "ToPrimitive".into(),
                     "AsBytes".into(),
                 ],
-            "HG_Pose" | "CAN_VARIABLE" | "Radio_ConfigMessage" | "Radio_Command" | "Radio_Reply" | "Radio_GlobalCommand" |
-            "Radio_PrimaryStatusHF" | "Radio_PrimaryStatusLF" |
+            "HG_Pose" | "CAN_VARIABLE" | "Radio_ConfigMessage" | "Radio_Command" | "Radio_GenericCommand" | "Radio_Reply" | "Radio_GlobalCommand" |
+            "Radio_PrimaryStatusHF" | "Radio_PrimaryStatusLF" | "Radio_SerialMessage" |
             "Radio_ImuReadings" | "MessageType" | "Radio_Message" | "Radio_RobotCommand" |
             "Radio_Message__bindgen_ty_1" | "Radio_Message__bindgen_ty_1__bindgen_ty_1" | "Radio_Message__bindgen_ty_1__bindgen_ty_2" |
-            "Radio_MultiConfigMessage" | "HG_ConfigOperation" | "HG_VariableType" |
+            "Radio_MultiConfigMessage" | "HG_ConfigOperation" | "HG_VariableType" | "Radio_PrimaryStatusHF__bindgen_ty_1" |
             "Radio_OdometryReading" | "Radio_OverrideOdometry" | "Radio_Access" | 
             "Radio_MessageWrapper" =>
                 vec![
@@ -58,6 +58,11 @@ fn main() {
         .raw_line("use num_derive::{ToPrimitive,FromPrimitive};")
         .raw_line("use zerocopy_derive::AsBytes;")
         .raw_line("use strum_macros::EnumIter;")
+        // Add these — cover [u8; 1] through whatever sizes your structs use:
+        .raw_line("unsafe impl zerocopy::AsBytes for __BindgenBitfieldUnit<[u8; 1]> { fn only_derive_is_allowed_to_implement_this_trait() {} }")
+        .raw_line("unsafe impl zerocopy::AsBytes for __BindgenBitfieldUnit<[u8; 2]> { fn only_derive_is_allowed_to_implement_this_trait() {} }")
+        .raw_line("unsafe impl zerocopy::AsBytes for __BindgenBitfieldUnit<[u8; 4]> { fn only_derive_is_allowed_to_implement_this_trait() {} }")
+        .raw_line("unsafe impl zerocopy::AsBytes for __BindgenBitfieldUnit<[u8; 8]> { fn only_derive_is_allowed_to_implement_this_trait() {} }")
         .header("wrapper.hpp")
         .derive_debug(true)
         .rustified_enum("HG::Status")

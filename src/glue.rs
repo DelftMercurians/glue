@@ -1,4 +1,4 @@
-#![allow(dead_code)]
+#![allow(dead_code, unnecessary_transmutes)]
 
 use num_traits::FromPrimitive;
 pub const crc_calc: crc::Crc<u8> = crc::Crc::<u8>::new(&crc::CRC_8_SMBUS);
@@ -14,7 +14,7 @@ pub enum Radio_Message_Rust {
     PrimaryStatusLF(Radio_PrimaryStatusLF),
     OdometryReading(Radio_OdometryReading),
     OverrideOdometry(Radio_OverrideOdometry),
-    // Reply(Radio_Reply),
+    SerialMessage(Radio_SerialMessage),
     None,
 }
 
@@ -137,8 +137,15 @@ impl Radio_Message_Rust {
                 msg: Radio_Message__bindgen_ty_1 {
                     __bindgen_anon_1: Radio_Message__bindgen_ty_1__bindgen_ty_1 {
                         ps_lf,
-                        _pad0: [0; 10],
+                        _pad0: [0; 8],
                     }
+                },
+            },
+            Self::SerialMessage(serial) => Radio_Message {
+                mt: Radio_MessageType::SerialMessage,
+                _pad: [0; 3],
+                msg: Radio_Message__bindgen_ty_1 {
+                    serial,
                 },
             },
             Self::None => Radio_Message {
@@ -181,11 +188,15 @@ impl Radio_Message_Rust {
                     return Radio_Message_Rust::OdometryReading(msg.msg.odo)
                 },
                 Radio_MessageType::MultiConfigMessage => {
+                    // Temporarily off due to unsafe/segfault issues
                     return Radio_Message_Rust::None
                 },
                 Radio_MessageType::OverrideOdometry => {
                     return Radio_Message_Rust::OverrideOdometry(msg.msg.over_odo)
                 },
+                Radio_MessageType::SerialMessage => {
+                    return Radio_Message_Rust::SerialMessage(msg.msg.serial)
+                }
                 Radio_MessageType::PrimaryStatusLF => {
                     // Convert to struct
                     let mut s: Radio_PrimaryStatusLF = msg.msg.__bindgen_anon_1.ps_lf;
@@ -193,7 +204,7 @@ impl Radio_Message_Rust {
                     // Catch bad values
                     if let None = crate::glue::HG_Status::from_u8(std::mem::transmute(s.primary_status)) { return Radio_Message_Rust::None; };
                     if let None = crate::glue::HG_Status::from_u8(std::mem::transmute(s.kicker_status)) { return Radio_Message_Rust::None; };
-                    if let None = crate::glue::HG_Status::from_u8(std::mem::transmute(s.fan_status)) { return Radio_Message_Rust::None; };
+                    if let None = crate::glue::HG_Status::from_u8(std::mem::transmute(s.tof_status)) { return Radio_Message_Rust::None; };
                     if let None = crate::glue::HG_Status::from_u8(std::mem::transmute(s.imu_status)) { return Radio_Message_Rust::None; };
                     for ms in &mut s.motor_status {
                         if let None = crate::glue::HG_Status::from_u8(std::mem::transmute(*ms)) { return Radio_Message_Rust::None; };

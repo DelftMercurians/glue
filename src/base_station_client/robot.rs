@@ -115,14 +115,14 @@ impl Robot {
         self.status_lf.have(|status_lf| {status_lf.imu_status})
     }
 
-    // Returns an Option containing the fan status
-    pub fn fan_status(&self) -> Option<glue::HG_Status> {
-        self.status_lf.have(|status_lf| {status_lf.fan_status})
+    // Returns an Option containing the tof status
+    pub fn tof_status(&self) -> Option<glue::HG_Status> {
+        self.status_lf.have(|status_lf| {status_lf.tof_status})
     }
 
     // Returns an Option containing the kicker capacitor voltage in Volts
     pub fn kicker_cap_voltage(&self) -> Option<f32> {
-        self.status_lf.have(|status_lf| {status_lf.cap_voltage as f32 * glue::HG_KICKER_SCALE_VCAP})
+        self.status_lf.have(|status_lf| {status_lf.cap_voltage as f32 * glue::Scale_KICKER_VCAP})
     }
 
     pub fn smart_kick_counter(&self) -> Option<u8> {
@@ -136,11 +136,6 @@ impl Robot {
     // Returns an Option containing the kicker board temperature in degrees Celsius
     pub fn kicker_temperature(&self) -> Option<f32> {
         None // Has been deprecated by new hardware design
-    }
-
-    // Returns an Option containing the power board status
-    pub fn power_board_status(&self) -> Option<glue::HG_Status> {
-        self.status_lf.have(|status_lf| {status_lf.power_board_status})
     }
 
     // Returns an Option of an array of all 5 motor statuses
@@ -169,7 +164,7 @@ impl Robot {
     pub fn motor_temperatures(&self) -> Option<[f32; 5]> {
         self.status_lf.have(|status_lf| {
             status_lf.motor_driver_temps.map(|temp| {
-                temp as f32 * glue::CAN_CAN_SCALE_TEMP
+                temp as f32 * glue::Scale_MD_TEMP
             })
         })
     }
@@ -182,18 +177,12 @@ impl Robot {
 
     //  Returns an Option containing the breakbeam ball detection status (true = ball present)
     pub fn breakbeam_ball_detected(&self) -> Option<bool> {
-        self.status_hf.have(|status_hf| {status_hf.breakbeam_ball_detected && status_hf.breakbeam_sensor_ok})
+        self.status_hf.have(|status_hf| {status_hf.__bindgen_anon_1.breakbeam_ball_detected() && status_hf.__bindgen_anon_1.breakbeam_sensor_ok()})
     }
 
     //  Returns an Option containing the breakbeam sensor ok status (false = sensor not functional)
     pub fn breakbeam_sensor_ok(&self) -> Option<bool> {
-        self.status_hf.have(|status_hf| {status_hf.breakbeam_sensor_ok})
-    }
-
-    // //  Returns an Option containing the downforce duct pressure (TODO figure out unit)
-    pub fn downforce_pressure(&self) -> Option<u16> {
-        self.status_hf.have(|status_hf| {status_hf.pressure})
-        // self.status_hf.have(|status_hf| {status_hf.pressure as f32 * glue::HG_SCALE_PRESSURE})
+        self.status_hf.have(|status_hf| {status_hf.__bindgen_anon_1.breakbeam_sensor_ok()})
     }
 
     //  Returns an Option containing the imu reading struct
@@ -205,7 +194,7 @@ impl Robot {
     pub fn pack_voltages(&self) -> Option<[f32; 2]> {
         self.status_lf.have(|status_lf| {
             status_lf.pack_voltages.map(|voltage| {
-                voltage as f32 * glue::CAN_CAN_SCALE_BATV
+                voltage as f32 * glue::Scale_MD_BATV
             })
         })
     }
