@@ -97,7 +97,7 @@ impl Radio_Message_Rust {
                 mt: Radio_MessageType::ImuReadings,
                 _pad: [0; 3],
                 msg: Radio_Message__bindgen_ty_1 {
-                    __bindgen_anon_2: Radio_Message__bindgen_ty_1__bindgen_ty_2 {
+                    __bindgen_anon_1: Radio_Message__bindgen_ty_1__bindgen_ty_1 {
                         ir,
                         _pad1: [0; 4],
                     }
@@ -135,10 +135,7 @@ impl Radio_Message_Rust {
                 mt: Radio_MessageType::PrimaryStatusLF,
                 _pad: [0; 3],
                 msg: Radio_Message__bindgen_ty_1 {
-                    __bindgen_anon_1: Radio_Message__bindgen_ty_1__bindgen_ty_1 {
-                        ps_lf,
-                        _pad0: [0; 8],
-                    }
+                    ps_lf,
                 },
             },
             Self::SerialMessage(serial) => Radio_Message {
@@ -152,7 +149,7 @@ impl Radio_Message_Rust {
                 mt: Radio_MessageType::None,
                 _pad: [0; 3],
                 msg: Radio_Message__bindgen_ty_1 {
-                    __bindgen_anon_2: Radio_Message__bindgen_ty_1__bindgen_ty_2 {
+                    __bindgen_anon_1: Radio_Message__bindgen_ty_1__bindgen_ty_1 {
                         ir: Radio_ImuReadings {
                             ang_wx: 0.0,
                             ang_wy: 0.0,
@@ -180,7 +177,7 @@ impl Radio_Message_Rust {
             match msg.mt {
                 Radio_MessageType::Command =>  return Radio_Message_Rust::Command(msg.msg.c),
                 Radio_MessageType::GlobalCommand =>  return Radio_Message_Rust::GlobalCommand(msg.msg.gc),
-                Radio_MessageType::ImuReadings =>  return Radio_Message_Rust::ImuReadings(msg.msg.__bindgen_anon_2.ir),
+                Radio_MessageType::ImuReadings =>  return Radio_Message_Rust::ImuReadings(msg.msg.__bindgen_anon_1.ir),
                 Radio_MessageType::PrimaryStatusHF => {
                     return Radio_Message_Rust::PrimaryStatusHF(msg.msg.ps_hf)
                 },
@@ -199,7 +196,7 @@ impl Radio_Message_Rust {
                 }
                 Radio_MessageType::PrimaryStatusLF => {
                     // Convert to struct
-                    let mut s: Radio_PrimaryStatusLF = msg.msg.__bindgen_anon_1.ps_lf;
+                    let mut s: Radio_PrimaryStatusLF = msg.msg.ps_lf;
 
                     // Catch bad values
                     if let None = crate::glue::HG_Status::from_u8(std::mem::transmute(s.primary_status)) { return Radio_Message_Rust::None; };
@@ -209,7 +206,7 @@ impl Radio_Message_Rust {
                     for ms in &mut s.motor_status {
                         if let None = crate::glue::HG_Status::from_u8(std::mem::transmute(*ms)) { return Radio_Message_Rust::None; };
                     }
-                    return Radio_Message_Rust::PrimaryStatusLF(msg.msg.__bindgen_anon_1.ps_lf);
+                    return Radio_Message_Rust::PrimaryStatusLF(msg.msg.ps_lf);
                 },
                 _ => return Radio_Message_Rust::None,
             }

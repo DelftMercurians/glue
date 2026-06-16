@@ -151,13 +151,15 @@ impl Robot {
 
     // Returns an Option of an array of all 5 motor speeds in rad/s
     pub fn motor_speeds(&self) -> Option<[f32; 5]> {
-        self.status_hf.have(|status_hf| {status_hf.motor_speeds})
+        self.status_hf.have(|status_hf| {
+            status_hf.motor_speeds_i.map(|x| x as f32 * glue::Scale_WHEEL_SPEED)
+        })
     }
 
     // Returns an Option of an individual motor speed in rad/s (note, use motor_speeds() when multiple motor speeds are required)
     pub fn motor_speed(&self, index : u8) -> Option<f32> {
         if index >= 5 { return None; }
-        self.status_hf.have(|status_hf| {status_hf.motor_speeds[index as usize]})
+        self.status_hf.have(|status_hf| {status_hf.motor_speeds_i[index as usize] as f32 * glue::Scale_WHEEL_SPEED})
     }
 
     // Returns an Option of an array of all 5 motor temperatures in degrees Celsius
