@@ -162,6 +162,19 @@ impl Robot {
         self.status_hf.have(|status_hf| {status_hf.motor_speeds_i[index as usize] as f32 * glue::Scale_WHEEL_SPEED})
     }
 
+    // Returns an Option of an array of all 5 motor currents in Amperes
+    pub fn motor_currents(&self) -> Option<[f32; 5]> {
+        self.status_hf.have(|status_hf| {
+            status_hf.motor_currents_i.map(|x| x as f32 * glue::Scale_CURRENT)
+        })
+    }
+
+    // Returns an Option of an individual motor current in Amperes (note, use motor_currents() when multiple motor speeds are required)
+    pub fn motor_current(&self, index : u8) -> Option<f32> {
+        if index >= 5 { return None; }
+        self.status_hf.have(|status_hf| {status_hf.motor_currents_i[index as usize] as f32 * glue::Scale_CURRENT})
+    }
+
     // Returns an Option of an array of all 5 motor temperatures in degrees Celsius
     pub fn motor_temperatures(&self) -> Option<[f32; 5]> {
         self.status_lf.have(|status_lf| {
@@ -185,6 +198,45 @@ impl Robot {
     //  Returns an Option containing the breakbeam sensor ok status (false = sensor not functional)
     pub fn breakbeam_sensor_ok(&self) -> Option<bool> {
         self.status_hf.have(|status_hf| {status_hf.__bindgen_anon_1.breakbeam_sensor_ok()})
+    }
+
+    //  Returns an Option containing the time of flight ball detection status (true = ball present)
+    pub fn tof_ball_detected(&self) -> Option<bool> {
+        self.status_hf.have(|status_hf| {status_hf.__bindgen_anon_1.tof_ball_detected() && status_hf.__bindgen_anon_1.tof_sensor_ok()})
+    }
+
+    //  Returns an Option containing the time of flight sensor ok status (false = sensor not functional)
+    pub fn tof_sensor_ok(&self) -> Option<bool> {
+        self.status_hf.have(|status_hf| {status_hf.__bindgen_anon_1.tof_sensor_ok()})
+    }
+
+    //  Returns an Option containing a pair of xy coordinates from the tof sensor. Note x is forward/back, y is left/right.
+    //  Returns None if the tof sensor is not detecting a ball or inoperational
+    pub fn tof_xy(&self) -> Option<(u8, i8)> {
+        self.tof_ball_detected().filter(|&b| b).and_then(|_| {
+            self.status_hf.have(|status_hf| {(status_hf.tof_ball_x, status_hf.tof_ball_y)})
+        })
+    }
+
+    //  Returns an Option containing the main board current in Amperes
+    pub fn main_board_current(&self) -> Option<f32> {
+        self.status_lf.have(|status_lf| {
+            status_lf.main_board_current as f32 * glue::Scale_CURRENT
+        })
+    }
+
+    //  Returns an Option containing the average loop time in microseconds
+    pub fn avg_loop_time(&self) -> Option<u32> {
+        self.status_lf.have(|status_lf| {
+            status_lf.avg_loop_time as u32 * 10
+        })
+    }
+
+    //  Returns an Option containing the average loop time in microseconds
+    pub fn max_loop_time(&self) -> Option<u32> {
+        self.status_lf.have(|status_lf| {
+            status_lf.max_loop_time as u32 * 10
+        })
     }
 
     //  Returns an Option containing the imu reading struct
