@@ -115,14 +115,14 @@ impl Robot {
         self.status_lf.have(|status_lf| {status_lf.imu_status})
     }
 
-    // Returns an Option containing the fan status
-    pub fn fan_status(&self) -> Option<glue::HG_Status> {
-        self.status_lf.have(|status_lf| {status_lf.fan_status})
+    // Returns an Option containing the tof status
+    pub fn tof_status(&self) -> Option<glue::HG_Status> {
+        self.status_lf.have(|status_lf| {status_lf.tof_status})
     }
 
     // Returns an Option containing the kicker capacitor voltage in Volts
     pub fn kicker_cap_voltage(&self) -> Option<f32> {
-        self.status_lf.have(|status_lf| {status_lf.cap_voltage as f32 * glue::HG_KICKER_SCALE_VCAP})
+        self.status_lf.have(|status_lf| {status_lf.cap_voltage as f32 * glue::Scale_KICKER_VCAP})
     }
 
     pub fn smart_kick_counter(&self) -> Option<u8> {
@@ -138,11 +138,6 @@ impl Robot {
         None // Has been deprecated by new hardware design
     }
 
-    // Returns an Option containing the power board status
-    pub fn power_board_status(&self) -> Option<glue::HG_Status> {
-        self.status_lf.have(|status_lf| {status_lf.power_board_status})
-    }
-
     // Returns an Option of an array of all 5 motor statuses
     pub fn motor_statuses(&self) -> Option<[glue::HG_Status; 5]> {
         self.status_lf.have(|status_lf| {status_lf.motor_status})
@@ -156,20 +151,35 @@ impl Robot {
 
     // Returns an Option of an array of all 5 motor speeds in rad/s
     pub fn motor_speeds(&self) -> Option<[f32; 5]> {
-        self.status_hf.have(|status_hf| {status_hf.motor_speeds})
+        self.status_hf.have(|status_hf| {
+            status_hf.motor_speeds_i.map(|x| x as f32 * glue::Scale_WHEEL_SPEED)
+        })
     }
 
     // Returns an Option of an individual motor speed in rad/s (note, use motor_speeds() when multiple motor speeds are required)
     pub fn motor_speed(&self, index : u8) -> Option<f32> {
         if index >= 5 { return None; }
-        self.status_hf.have(|status_hf| {status_hf.motor_speeds[index as usize]})
+        self.status_hf.have(|status_hf| {status_hf.motor_speeds_i[index as usize] as f32 * glue::Scale_WHEEL_SPEED})
+    }
+
+    // Returns an Option of an array of all 5 motor currents in Amperes
+    pub fn motor_currents(&self) -> Option<[f32; 5]> {
+        self.status_hf.have(|status_hf| {
+            status_hf.motor_currents_i.map(|x| x as f32 * glue::Scale_CURRENT)
+        })
+    }
+
+    // Returns an Option of an individual motor current in Amperes (note, use motor_currents() when multiple motor speeds are required)
+    pub fn motor_current(&self, index : u8) -> Option<f32> {
+        if index >= 5 { return None; }
+        self.status_hf.have(|status_hf| {status_hf.motor_currents_i[index as usize] as f32 * glue::Scale_CURRENT})
     }
 
     // Returns an Option of an array of all 5 motor temperatures in degrees Celsius
     pub fn motor_temperatures(&self) -> Option<[f32; 5]> {
         self.status_lf.have(|status_lf| {
             status_lf.motor_driver_temps.map(|temp| {
-                temp as f32 * glue::CAN_CAN_SCALE_TEMP
+                temp as f32 * glue::Scale_MD_TEMP
             })
         })
     }
@@ -182,18 +192,51 @@ impl Robot {
 
     //  Returns an Option containing the breakbeam ball detection status (true = ball present)
     pub fn breakbeam_ball_detected(&self) -> Option<bool> {
-        self.status_hf.have(|status_hf| {status_hf.breakbeam_ball_detected && status_hf.breakbeam_sensor_ok})
+        self.status_hf.have(|status_hf| {status_hf.__bindgen_anon_1.breakbeam_ball_detected() && status_hf.__bindgen_anon_1.breakbeam_sensor_ok()})
     }
 
     //  Returns an Option containing the breakbeam sensor ok status (false = sensor not functional)
     pub fn breakbeam_sensor_ok(&self) -> Option<bool> {
-        self.status_hf.have(|status_hf| {status_hf.breakbeam_sensor_ok})
+        self.status_hf.have(|status_hf| {status_hf.__bindgen_anon_1.breakbeam_sensor_ok()})
     }
 
-    // //  Returns an Option containing the downforce duct pressure (TODO figure out unit)
-    pub fn downforce_pressure(&self) -> Option<u16> {
-        self.status_hf.have(|status_hf| {status_hf.pressure})
-        // self.status_hf.have(|status_hf| {status_hf.pressure as f32 * glue::HG_SCALE_PRESSURE})
+    //  Returns an Option containing the time of flight ball detection status (true = ball present)
+    pub fn tof_ball_detected(&self) -> Option<bool> {
+        self.status_hf.have(|status_hf| {status_hf.__bindgen_anon_1.tof_ball_detected() && status_hf.__bindgen_anon_1.tof_sensor_ok()})
+    }
+
+    //  Returns an Option containing the time of flight sensor ok status (false = sensor not functional)
+    pub fn tof_sensor_ok(&self) -> Option<bool> {
+        self.status_hf.have(|status_hf| {status_hf.__bindgen_anon_1.tof_sensor_ok()})
+    }
+
+    //  Returns an Option containing a pair of xy coordinates from the tof sensor. Note x is forward/back, y is left/right.
+    //  Returns None if the tof sensor is not detecting a ball or inoperational
+    pub fn tof_xy(&self) -> Option<(u8, i8)> {
+        self.tof_ball_detected().filter(|&b| b).and_then(|_| {
+            self.status_hf.have(|status_hf| {(status_hf.tof_ball_x, status_hf.tof_ball_y)})
+        })
+    }
+
+    //  Returns an Option containing the main board current in Amperes
+    pub fn main_board_current(&self) -> Option<f32> {
+        self.status_lf.have(|status_lf| {
+            status_lf.main_board_current as f32 * glue::Scale_CURRENT
+        })
+    }
+
+    //  Returns an Option containing the average loop time in microseconds
+    pub fn avg_loop_time(&self) -> Option<u32> {
+        self.status_lf.have(|status_lf| {
+            status_lf.avg_loop_time as u32 * 10
+        })
+    }
+
+    //  Returns an Option containing the average loop time in microseconds
+    pub fn max_loop_time(&self) -> Option<u32> {
+        self.status_lf.have(|status_lf| {
+            status_lf.max_loop_time as u32 * 10
+        })
     }
 
     //  Returns an Option containing the imu reading struct
@@ -201,11 +244,15 @@ impl Robot {
         self.imu_reading.have(|imu| {imu})
     }
 
+    pub fn breakbeam_raw(&self) -> Option<u16> {
+        self.status_hf.have(|status_hf| {status_hf.breakbeam_raw})
+    }
+
     // Returns an Option containing the left (0) and right (1) pack voltages in Volts
     pub fn pack_voltages(&self) -> Option<[f32; 2]> {
         self.status_lf.have(|status_lf| {
             status_lf.pack_voltages.map(|voltage| {
-                voltage as f32 * glue::CAN_CAN_SCALE_BATV
+                voltage as f32 * glue::Scale_MD_BATV
             })
         })
     }

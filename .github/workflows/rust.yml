@@ -19,7 +19,7 @@ jobs:
       with:
           submodules: 'true'
     - name: Instal libudev
-      run: sudo apt-get -yyq install libudev-dev
+      run: sudo apt-get update && sudo apt-get -yyq install libudev-dev
     - name: Build
       run: cargo build --verbose
     # - name: Run tests

@@ -1,4 +1,4 @@
-#![allow(dead_code)]
+#![allow(dead_code, unnecessary_transmutes)]
 
 use num_traits::FromPrimitive;
 pub const crc_calc: crc::Crc<u8> = crc::Crc::<u8>::new(&crc::CRC_8_SMBUS);
@@ -14,7 +14,7 @@ pub enum Radio_Message_Rust {
     PrimaryStatusLF(Radio_PrimaryStatusLF),
     OdometryReading(Radio_OdometryReading),
     OverrideOdometry(Radio_OverrideOdometry),
-    // Reply(Radio_Reply),
+    SerialMessage(Radio_SerialMessage),
     None,
 }
 
@@ -97,7 +97,7 @@ impl Radio_Message_Rust {
                 mt: Radio_MessageType::ImuReadings,
                 _pad: [0; 3],
                 msg: Radio_Message__bindgen_ty_1 {
-                    __bindgen_anon_2: Radio_Message__bindgen_ty_1__bindgen_ty_2 {
+                    __bindgen_anon_1: Radio_Message__bindgen_ty_1__bindgen_ty_1 {
                         ir,
                         _pad1: [0; 4],
                     }
@@ -135,17 +135,21 @@ impl Radio_Message_Rust {
                 mt: Radio_MessageType::PrimaryStatusLF,
                 _pad: [0; 3],
                 msg: Radio_Message__bindgen_ty_1 {
-                    __bindgen_anon_1: Radio_Message__bindgen_ty_1__bindgen_ty_1 {
-                        ps_lf,
-                        _pad0: [0; 10],
-                    }
+                    ps_lf,
+                },
+            },
+            Self::SerialMessage(serial) => Radio_Message {
+                mt: Radio_MessageType::SerialMessage,
+                _pad: [0; 3],
+                msg: Radio_Message__bindgen_ty_1 {
+                    serial,
                 },
             },
             Self::None => Radio_Message {
                 mt: Radio_MessageType::None,
                 _pad: [0; 3],
                 msg: Radio_Message__bindgen_ty_1 {
-                    __bindgen_anon_2: Radio_Message__bindgen_ty_1__bindgen_ty_2 {
+                    __bindgen_anon_1: Radio_Message__bindgen_ty_1__bindgen_ty_1 {
                         ir: Radio_ImuReadings {
                             ang_wx: 0.0,
                             ang_wy: 0.0,
@@ -173,7 +177,7 @@ impl Radio_Message_Rust {
             match msg.mt {
                 Radio_MessageType::Command =>  return Radio_Message_Rust::Command(msg.msg.c),
                 Radio_MessageType::GlobalCommand =>  return Radio_Message_Rust::GlobalCommand(msg.msg.gc),
-                Radio_MessageType::ImuReadings =>  return Radio_Message_Rust::ImuReadings(msg.msg.__bindgen_anon_2.ir),
+                Radio_MessageType::ImuReadings =>  return Radio_Message_Rust::ImuReadings(msg.msg.__bindgen_anon_1.ir),
                 Radio_MessageType::PrimaryStatusHF => {
                     return Radio_Message_Rust::PrimaryStatusHF(msg.msg.ps_hf)
                 },
@@ -181,24 +185,28 @@ impl Radio_Message_Rust {
                     return Radio_Message_Rust::OdometryReading(msg.msg.odo)
                 },
                 Radio_MessageType::MultiConfigMessage => {
+                    // Temporarily off due to unsafe/segfault issues
                     return Radio_Message_Rust::None
                 },
                 Radio_MessageType::OverrideOdometry => {
                     return Radio_Message_Rust::OverrideOdometry(msg.msg.over_odo)
                 },
+                Radio_MessageType::SerialMessage => {
+                    return Radio_Message_Rust::SerialMessage(msg.msg.serial)
+                }
                 Radio_MessageType::PrimaryStatusLF => {
                     // Convert to struct
-                    let mut s: Radio_PrimaryStatusLF = msg.msg.__bindgen_anon_1.ps_lf;
+                    let mut s: Radio_PrimaryStatusLF = msg.msg.ps_lf;
 
                     // Catch bad values
                     if let None = crate::glue::HG_Status::from_u8(std::mem::transmute(s.primary_status)) { return Radio_Message_Rust::None; };
                     if let None = crate::glue::HG_Status::from_u8(std::mem::transmute(s.kicker_status)) { return Radio_Message_Rust::None; };
-                    if let None = crate::glue::HG_Status::from_u8(std::mem::transmute(s.fan_status)) { return Radio_Message_Rust::None; };
+                    if let None = crate::glue::HG_Status::from_u8(std::mem::transmute(s.tof_status)) { return Radio_Message_Rust::None; };
                     if let None = crate::glue::HG_Status::from_u8(std::mem::transmute(s.imu_status)) { return Radio_Message_Rust::None; };
                     for ms in &mut s.motor_status {
                         if let None = crate::glue::HG_Status::from_u8(std::mem::transmute(*ms)) { return Radio_Message_Rust::None; };
                     }
-                    return Radio_Message_Rust::PrimaryStatusLF(msg.msg.__bindgen_anon_1.ps_lf);
+                    return Radio_Message_Rust::PrimaryStatusLF(msg.msg.ps_lf);
                 },
                 _ => return Radio_Message_Rust::None,
             }
