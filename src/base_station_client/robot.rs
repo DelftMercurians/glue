@@ -134,7 +134,7 @@ impl Robot {
     }
 
     pub fn reflex_kick_counter(&self) -> Option<u8> {
-        self.status_hf.have(|status_hf| {status_hf.__bindgen_anon_2.kick_counter()})
+        self.status_hf.have(|status_hf| {status_hf.kick_counter})
     }
 
     pub fn reflex_kick_state(&self) -> Option<glue::HG_ReflexState> {
