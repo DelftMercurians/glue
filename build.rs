@@ -78,6 +78,7 @@ fn main() {
         .rustified_enum("HG::VariableType")
         .rustified_enum("HG::Variable")
         .rustified_enum("Radio::Access")
+        .rustified_enum("HG::ReflexState")
         .clang_arg("--target=arm-none-eabi")
         .clang_arg("-DUSING_BINDGEN")
        
