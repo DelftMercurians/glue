@@ -130,7 +130,11 @@ impl Robot {
     }
 
     pub fn kick_ok_flag(&self) -> Option<u8> {
-        self.status_hf.have(|status_hf| {status_hf.last_kick_ok})
+        self.status_hf.have(|status_hf| {status_hf.__bindgen_anon_2.last_kick_ok()})
+    }
+
+    pub fn reflex_kick_counter(&self) -> Option<u8> {
+        self.status_hf.have(|status_hf| {status_hf.__bindgen_anon_2.reflex_kick_counter()})
     }
 
     // Returns an Option containing the kicker board temperature in degrees Celsius
