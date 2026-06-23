@@ -129,8 +129,16 @@ impl Robot {
         self.status_hf.have(|status_hf| {status_hf.smart_kick_counter_return})
     }
 
-    pub fn kick_ok_flag(&self) -> Option<u8> {
-        self.status_hf.have(|status_hf| {status_hf.last_kick_ok})
+    pub fn kick_ok_flag(&self) -> Option<bool> {
+        self.status_hf.have(|status_hf| {status_hf.__bindgen_anon_2.last_kick_ok()})
+    }
+
+    pub fn reflex_kick_counter(&self) -> Option<u8> {
+        self.status_hf.have(|status_hf| {status_hf.kick_counter})
+    }
+
+    pub fn reflex_kick_state(&self) -> Option<glue::HG_ReflexState> {
+        self.status_hf.have(|status_hf| {status_hf.__bindgen_anon_2.reflex_state()})
     }
 
     // Returns an Option containing the kicker board temperature in degrees Celsius
