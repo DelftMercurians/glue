@@ -48,7 +48,8 @@ impl Serial {
     fn is_basestation(port : &serialport::SerialPortInfo) -> bool {
         match &port.port_type {
             serialport::SerialPortType::UsbPort(info) => {
-                (info.vid == 0x0483) && (info.pid == 0x5740)
+                ((info.vid == 0x0483) && (info.pid == 0x5740))
+                    || ((info.vid == 0xC0DE) && (info.pid == 0xCAFE))
             }
             _ => false,
         }
