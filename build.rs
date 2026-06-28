@@ -17,7 +17,7 @@ struct MacroCallback {
 impl ParseCallbacks for MacroCallback {
     fn add_derives(&self, info: &DeriveInfo<'_>) -> Vec<String> {
         match info.name {
-            "HG_Status" | "Radio_MessageType" =>
+            "HG_Status" | "Radio_MessageType" | "Radio_RobotCommand" =>
                 vec![
                     "FromPrimitive".into(),
                     "ToPrimitive".into(),
@@ -25,7 +25,7 @@ impl ParseCallbacks for MacroCallback {
                 ],
             "HG_Pose" | "CAN_VARIABLE" | "Radio_ConfigMessage" | "Radio_Command" | "Radio_GenericCommand" | "Radio_Reply" | "Radio_GlobalCommand" |
             "Radio_PrimaryStatusHF" | "Radio_PrimaryStatusLF" | "Radio_SerialMessage" |
-            "Radio_ImuReadings" | "MessageType" | "Radio_Message" | "Radio_RobotCommand" |
+            "Radio_ImuReadings" | "MessageType" | "Radio_Message" |
             "Radio_Message__bindgen_ty_1" | "Radio_Message__bindgen_ty_1__bindgen_ty_1" | "Radio_Message__bindgen_ty_1__bindgen_ty_2" |
             "Radio_MultiConfigMessage" | "HG_ConfigOperation" | "HG_VariableType" | "Radio_PrimaryStatusHF__bindgen_ty_1" | "Radio_PrimaryStatusHF__bindgen_ty_2" |
             "Radio_OdometryReading" | "Radio_OverrideOdometry" | "Radio_Access" | 

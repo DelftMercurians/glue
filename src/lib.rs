@@ -19,26 +19,91 @@ pub use glue::{HG_Status, HG_ReflexState, Radio_Message_Rust, Radio_Command, Rad
 mod tests {
     use super::*;
 
+    fn sample_command() -> glue::Radio_Command {
+        glue::Radio_Command {
+            speed: glue::HG_Pose { x: 0.0, y: 0.0, z: 0.0 },
+            gen_command: glue::Radio_GenericCommand {
+                dribbler_speed_i: 5,
+                kick_time_i: 2,
+                time_to_kick: 0,
+                smart_kick_couter: 0,
+                robot_command: glue::Radio_RobotCommand::NONE,
+            },
+            _pad: [0; 8],
+        }
+    }
+
     #[test]
     fn test_to_packet() {
-        let mw = glue::Radio_MessageWrapper{
+        let mw = glue::Radio_MessageWrapper {
             id: 42,
             _pad: [0, 0, 0],
-            msg: glue::Radio_Message_Rust::Command(glue::Radio_Command {
-                speed: glue::HG_Pose {
-                    x: 0.0,
-                    y: 0.0,
-                    z: 0.0,
-                },
-                dribbler_speed: 5.0,
-                robot_command: glue::Radio_RobotCommand::NONE,
-                _pad: [0, 0, 0],
-                kick_time: 2.0,
-                fan_speed: 3.141,
-            },).wrap(),
+            msg: glue::Radio_Message_Rust::Command(sample_command()).wrap(),
         };
         let packet = glue::to_packet(mw);
         println!("packet = {packet:02X?}");
+    }
+
+    #[test]
+    fn unwrap_rejects_garbage_robot_command() {
+        use zerocopy::AsBytes;
+
+        // Sanity: 0xAB is not a known discriminant; NONE (0) is.
+        assert!(<glue::Radio_RobotCommand as num_traits::FromPrimitive>::from_u8(0xAB).is_none());
+        assert!(<glue::Radio_RobotCommand as num_traits::FromPrimitive>::from_u8(0).is_some());
+
+        for mt in [
+            glue::Radio_MessageType::Command,
+            glue::Radio_MessageType::GlobalCommand,
+        ] {
+            // A fully valid wrapper for this message type.
+            let msg = match mt {
+                glue::Radio_MessageType::Command => {
+                    glue::Radio_Message_Rust::Command(sample_command())
+                }
+                _ => glue::Radio_Message_Rust::GlobalCommand(glue::Radio_GlobalCommand {
+                    global_speed_x: 0.0,
+                    global_speed_y: 0.0,
+                    heading_last_measurement: 0.0,
+                    heading_setpoint: 0.0,
+                    gen_command: sample_command().gen_command,
+                    max_yaw_rate: 0,
+                    preferred_rotation_direction: 0,
+                    _pad: 0,
+                }),
+            };
+            let wrapper = glue::Radio_MessageWrapper { id: 0, _pad: [0; 3], msg: msg.wrap() };
+
+            // Valid frame round-trips through from_bytes + unwrap.
+            let good = wrapper.as_bytes().to_vec();
+            let parsed = glue::Radio_MessageWrapper::from_bytes(good.clone())
+                .expect("valid frame should parse");
+            assert!(!matches!(
+                glue::Radio_Message_Rust::unwrap(parsed.msg),
+                glue::Radio_Message_Rust::None
+            ));
+
+            // Locate the nested robot_command byte and stomp it with garbage.
+            let base = &wrapper as *const _ as usize;
+            let off = unsafe {
+                match mt {
+                    glue::Radio_MessageType::Command => {
+                        std::ptr::addr_of!(wrapper.msg.msg.c.gen_command.robot_command) as usize
+                    }
+                    _ => std::ptr::addr_of!(wrapper.msg.msg.gc.gen_command.robot_command) as usize,
+                }
+            } - base;
+            let mut bad = good;
+            bad[off] = 0xAB;
+
+            // Must not trap; the corrupt frame is dropped to None.
+            let parsed = glue::Radio_MessageWrapper::from_bytes(bad)
+                .expect("frame length/type still valid");
+            assert!(matches!(
+                glue::Radio_Message_Rust::unwrap(parsed.msg),
+                glue::Radio_Message_Rust::None
+            ));
+        }
     }
 
     // #[test]

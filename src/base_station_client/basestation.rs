@@ -704,11 +704,14 @@ mod basestation_tests {
                     y: 0.0,
                     z: 0.0,
                 },
-                dribbler_speed: 2.0,
-                robot_command: Radio_RobotCommand::NONE,
-                _pad: [0, 0, 0],
-                kick_time: 1.0,
-                fan_speed: 2.0,
+                gen_command: crate::glue::Radio_GenericCommand {
+                    dribbler_speed_i: 2,
+                    kick_time_i: 1,
+                    time_to_kick: 0,
+                    smart_kick_couter: 0,
+                    robot_command: Radio_RobotCommand::NONE,
+                },
+                _pad: [0; 8],
             });
             // }
 

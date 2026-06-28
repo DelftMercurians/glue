@@ -175,8 +175,16 @@ impl Radio_Message_Rust {
             
             // Accessing stuff from a union requires unsafe
             match msg.mt {
-                Radio_MessageType::Command =>  return Radio_Message_Rust::Command(msg.msg.c),
-                Radio_MessageType::GlobalCommand =>  return Radio_Message_Rust::GlobalCommand(msg.msg.gc),
+                Radio_MessageType::Command => {
+                    let c = msg.msg.c;
+                    if let None = crate::glue::Radio_RobotCommand::from_u8(std::mem::transmute(c.gen_command.robot_command)) { return Radio_Message_Rust::None; }
+                    return Radio_Message_Rust::Command(c);
+                },
+                Radio_MessageType::GlobalCommand => {
+                    let gc = msg.msg.gc;
+                    if let None = crate::glue::Radio_RobotCommand::from_u8(std::mem::transmute(gc.gen_command.robot_command)) { return Radio_Message_Rust::None; }
+                    return Radio_Message_Rust::GlobalCommand(gc);
+                },
                 Radio_MessageType::ImuReadings =>  return Radio_Message_Rust::ImuReadings(msg.msg.__bindgen_anon_1.ir),
                 Radio_MessageType::PrimaryStatusHF => {
                     return Radio_Message_Rust::PrimaryStatusHF(msg.msg.ps_hf)
