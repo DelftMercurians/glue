@@ -6,10 +6,11 @@ mod base_station_client;
 mod glue;
 
 // Only export stuff that's useful to the outside world
-pub use base_station_client::basestation::{Monitor, MAX_NUM_ROBOTS};
+pub use base_station_client::basestation::{BaseStation, Debug, Monitor, MAX_NUM_ROBOTS};
+pub use base_station_client::robot::Robot;
 pub use base_station_client::serial::Serial;
 pub use base_station_client::utils::Stamped;
-pub use glue::{HG_Status, HG_ReflexState, Radio_Message_Rust, Radio_Command, Radio_GlobalCommand, HG_Pose, Radio_MessageWrapper, Radio_ImuReadings, Radio_RobotCommand, Base_Information, Radio_OverrideOdometry, Radio_SerialMessage, Radio_GenericCommand, Radio_MultiConfigMessage, Radio_SSL_ID, HG_Variable, HG_ConfigOperation, HG_VariableType};
+pub use glue::{HG_Status, HG_ReflexState, Radio_Message_Rust, Radio_Command, Radio_GlobalCommand, HG_Pose, Radio_MessageWrapper, Radio_ImuReadings, Radio_RobotCommand, Base_Information, Radio_OverrideOdometry, Radio_SerialMessage, Radio_GenericCommand, Radio_MultiConfigMessage, Radio_SSL_ID, Radio_Broadcast_ID, Radio_BaseStation_ID, HG_Variable, HG_ConfigOperation, HG_VariableType};
 
 
 

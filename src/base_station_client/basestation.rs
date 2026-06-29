@@ -33,8 +33,26 @@ pub struct BaseStation {
     pub robots: [Robot; MAX_NUM_ROBOTS],
     pub base_info: Stamped<Base_Information>,
 
-    serial: Serial,
+    pub serial: Serial,
     start_time: std::time::Instant,
+}
+
+impl Debug {
+    pub fn new() -> Self {
+        Debug {
+            incoming_lines: Default::default(),
+            imu_values: Default::default(),
+            odo_values: Default::default(),
+            config_variable_returns: [[Stamped::NothingYet; 256]; MAX_NUM_ROBOTS],
+            update: false,
+        }
+    }
+}
+
+impl Default for Debug {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 impl BaseStation {
