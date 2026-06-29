@@ -247,6 +247,13 @@ impl Robot {
         })
     }
 
+    //  Returns an Option containing the average command time in milliseconds
+    pub fn avg_command_time(&self) -> Option<u32> {
+        self.status_lf.have(|status_lf| {
+            status_lf.avg_command_time as u32
+        })
+    }
+
     //  Returns an Option containing the imu reading struct
     pub fn imu_reading(&self) -> Option<Radio_ImuReadings> {
         self.imu_reading.have(|imu| {imu})
