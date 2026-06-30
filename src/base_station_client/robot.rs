@@ -226,6 +226,11 @@ impl Robot {
         })
     }
 
+    //  Returns an Option containing the time of flight sensor ball detection confidence
+    pub fn tof_confidence(&self) -> Option<u8> {
+        self.status_hf.have(|status_hf| {status_hf.tof_confidence})
+    }
+
     //  Returns an Option containing the main board current in Amperes
     pub fn main_board_current(&self) -> Option<f32> {
         self.status_lf.have(|status_lf| {
