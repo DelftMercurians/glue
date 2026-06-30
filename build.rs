@@ -21,7 +21,10 @@ impl ParseCallbacks for MacroCallback {
                 vec![
                     "FromPrimitive".into(),
                     "ToPrimitive".into(),
-                    "AsBytes".into(),
+                    "Immutable".into(),
+                    "KnownLayout".into(),
+                    "IntoBytes".into(),
+                    "TryFromBytes".into(),
                 ],
             "HG_Pose" | "CAN_VARIABLE" | "Radio_ConfigMessage" | "Radio_Command" | "Radio_GenericCommand" | "Radio_Reply" | "Radio_GlobalCommand" |
             "Radio_PrimaryStatusHF" | "Radio_PrimaryStatusLF" | "Radio_SerialMessage" |
@@ -31,12 +34,24 @@ impl ParseCallbacks for MacroCallback {
             "Radio_OdometryReading" | "Radio_OverrideOdometry" | "Radio_Access" | 
             "Radio_MessageWrapper" =>
                 vec![
-                    "AsBytes".into(),
+                    "Immutable".into(),
+                    "KnownLayout".into(),
+                    "IntoBytes".into(),
+                    "TryFromBytes".into(),
                 ],
             "HG_Variable" =>
                 vec![
                     "EnumIter".into(),
-                    "AsBytes".into(),
+                    "Immutable".into(),
+                    "KnownLayout".into(),
+                    "IntoBytes".into(),
+                    "TryFromBytes".into(),
+                ],
+            "HG_Version" | "Base_Information" =>
+                vec![
+                    "Immutable".into(),
+                    "KnownLayout".into(),
+                    "TryFromBytes".into(),
                 ],
             _ => vec![],
         }
@@ -56,7 +71,7 @@ fn main() {
         // The input header we would like to generate
         // bindings for.
         .raw_line("use num_derive::{ToPrimitive,FromPrimitive};")
-        .raw_line("use zerocopy_derive::AsBytes;")
+        .raw_line("use zerocopy_derive::{IntoBytes,TryFromBytes,Immutable,KnownLayout};")
         .raw_line("use strum_macros::EnumIter;")
         // Add these — cover [u8; 1] through whatever sizes your structs use:
         .raw_line("unsafe impl zerocopy::AsBytes for __BindgenBitfieldUnit<[u8; 1]> { fn only_derive_is_allowed_to_implement_this_trait() {} }")
