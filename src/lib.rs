@@ -46,12 +46,8 @@ mod tests {
     }
 
     #[test]
-    fn unwrap_rejects_garbage_robot_command() {
+    fn garbage_robot_command_round_trips_without_trap() {
         use zerocopy::AsBytes;
-
-        // Sanity: 0xAB is not a known discriminant; NONE (0) is.
-        assert!(<glue::Radio_RobotCommand as num_traits::FromPrimitive>::from_u8(0xAB).is_none());
-        assert!(<glue::Radio_RobotCommand as num_traits::FromPrimitive>::from_u8(0).is_some());
 
         for mt in [
             glue::Radio_MessageType::Command,
@@ -97,13 +93,17 @@ mod tests {
             let mut bad = good;
             bad[off] = 0xAB;
 
-            // Must not trap; the corrupt frame is dropped to None.
-            let parsed = glue::Radio_MessageWrapper::from_bytes(bad)
-                .expect("frame length/type still valid");
-            assert!(matches!(
-                glue::Radio_Message_Rust::unwrap(parsed.msg),
-                glue::Radio_Message_Rust::None
-            ));
+            // robot_command is a newtype enum: 0xAB is a representable value, so
+            // this must not trap and the frame is preserved verbatim rather than
+            // dropped. The garbage value survives round-trip as-is.
+            let w = glue::Radio_MessageWrapper::from_bytes(bad)
+                .expect("frame length is valid so it parses");
+            let rc = match glue::Radio_Message_Rust::unwrap(w.msg) {
+                glue::Radio_Message_Rust::Command(c) => c.gen_command.robot_command,
+                glue::Radio_Message_Rust::GlobalCommand(gc) => gc.gen_command.robot_command,
+                _ => panic!("frame with unknown robot_command should still parse"),
+            };
+            assert_eq!(rc, glue::Radio_RobotCommand(0xAB));
         }
     }
 

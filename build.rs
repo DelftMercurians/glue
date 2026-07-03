@@ -17,10 +17,14 @@ struct MacroCallback {
 impl ParseCallbacks for MacroCallback {
     fn add_derives(&self, info: &DeriveInfo<'_>) -> Vec<String> {
         match info.name {
+            // These enums are decoded directly from wire bytes. Emitting them as
+            // newtypes (see newtype_enum below) means every byte pattern is a
+            // representable value, so transmuting a garbled frame into a struct
+            // that contains them can never be undefined behaviour. They keep
+            // AsBytes (needed by the containing message structs) but drop the
+            // num_derive traits, which only apply to real `enum`s.
             "HG_Status" | "Radio_MessageType" | "Radio_RobotCommand" =>
                 vec![
-                    "FromPrimitive".into(),
-                    "ToPrimitive".into(),
                     "AsBytes".into(),
                 ],
             "HG_Pose" | "CAN_VARIABLE" | "Radio_ConfigMessage" | "Radio_Command" | "Radio_GenericCommand" | "Radio_Reply" | "Radio_GlobalCommand" |
@@ -55,7 +59,6 @@ fn main() {
     let mut bindgen_builder = bindgen::Builder::default()
         // The input header we would like to generate
         // bindings for.
-        .raw_line("use num_derive::{ToPrimitive,FromPrimitive};")
         .raw_line("use zerocopy_derive::AsBytes;")
         .raw_line("use strum_macros::EnumIter;")
         // Add these — cover [u8; 1] through whatever sizes your structs use:
@@ -65,15 +68,17 @@ fn main() {
         .raw_line("unsafe impl zerocopy::AsBytes for __BindgenBitfieldUnit<[u8; 8]> { fn only_derive_is_allowed_to_implement_this_trait() {} }")
         .header("wrapper.hpp")
         .derive_debug(true)
-        .rustified_enum("HG::Status")
+        // Wire-inbound enums: newtypes so no byte pattern is ever an invalid
+        // value (removes the transmute-UB surface when parsing garbled frames).
+        .newtype_enum("HG::Status")
+        .newtype_enum("Radio::MessageType")
+        .newtype_enum("Radio::RobotCommand")
         .rustified_enum("CAN::DEVICE_ID")
         .rustified_enum("CAN::MESSAGE_ID")
         .rustified_enum("CAN::ACCESS")
         .rustified_enum("CAN::VARIABLE")
         .rustified_enum("Radio::PrimaryStatusHF")
         .rustified_enum("Radio::PrimaryStatusLF")
-        .rustified_enum("Radio::MessageType")
-        .rustified_enum("Radio::RobotCommand")
         .rustified_enum("HG::ConfigOperation")
         .rustified_enum("HG::VariableType")
         .rustified_enum("HG::Variable")
