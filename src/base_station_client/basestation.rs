@@ -295,6 +295,7 @@ impl Monitor {
                     if time_start.elapsed() > std::time::Duration::from_millis(40) {
                         return None;
                     }
+                    std::thread::sleep(std::time::Duration::from_millis(1));
                 }
             }
         }
@@ -312,6 +313,7 @@ impl Monitor {
                     if time_start.elapsed() > std::time::Duration::from_millis(40) {
                         return None;
                     }
+                    std::thread::sleep(std::time::Duration::from_millis(1));
                 }
             }
         }
@@ -426,9 +428,6 @@ impl Monitor {
                             },
                             Err(std::sync::mpsc::TryRecvError::Empty) => (),
                         }
-                        let time_start = std::time::Instant::now();
-                        while time_start.elapsed() < std::time::Duration::from_millis(20) {  }  // Blocking sleep alternative
-                        // std::thread::sleep(std::time::Duration::from_micros(1)); // Give other threads an opportunity to access the mutex
                     } else {
                         let _ = bs_connected_sender.send(false);
                     }
@@ -436,8 +435,10 @@ impl Monitor {
                         *monitor_mut = None;
                     }
                     // println!("time = {:?}", start_time.elapsed());
-                    
+
                 } // monitor mutex
+                // Sleep with both mutexes released, should solve the burning CPU issue
+                std::thread::sleep(std::time::Duration::from_millis(20));
             }
         });
         Monitor {
